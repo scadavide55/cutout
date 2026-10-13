@@ -1,0 +1,1004 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cutout — free background remover</title>
+<meta name="description" content="Remove image backgrounds in your browser. No account, no upload, no cost.">
+<style>
+  :root{
+  color-scheme: dark light;
+  --bg:#0e1013; --panel:#171a1f; --panel2:#1e2229; --line:#2a2f38;
+  --text:#e8eaed; --dim:#9aa3af; --dim2:#6b7480;
+  --accent:#4c9aff; --good:#3ecf8e; --warn:#f0b429; --bad:#f0616d;
+  --radius:12px;
+  /* the "this pixel is transparent" checkerboard, themed per mode */
+  --chk-a:#2a2f2c; --chk-b:#202422;
+  --swchk-a:#3a3f45; --swchk-b:#262a2e;
+  --ico-bg:#2b323c; --sel-bg:#182231; --over-bg:#1b2331;
+  --hover-bg:#262b34; --hover-line:#3a4150;
+  --pri-text:#08131f; --done-bg:#16321f; --done-line:#245c39;
+  --warn-bg:#2a2210; --warn-line:#4a3a12;
+  --scrim:rgba(8,10,13,.82);
+  --pri-hover:#63a9ff; --strong:#c3cad4;
+  --shadow:0 24px 60px rgba(0,0,0,.5);
+}
+
+/* Light mode follows the OS automatically — no toggle, no stored
+   preference, nothing to get out of sync. */
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#f4f5f7; --panel:#ffffff; --panel2:#eff1f4; --line:#d9dde3;
+    --text:#15181c; --dim:#5a626d; --dim2:#868e99;
+    --accent:#1f6feb; --good:#0f8f5a; --warn:#9a6400; --bad:#cf3543;
+    --chk-a:#e6e9ee; --chk-b:#f7f8fa;
+    --swchk-a:#d3d8df; --swchk-b:#eef0f4;
+    --ico-bg:#e6e9ee; --sel-bg:#e8f0fe; --over-bg:#e8f0fe;
+    --hover-bg:#e9ecf1; --hover-line:#c3c9d2;
+    --pri-text:#ffffff; --done-bg:#e2f5eb; --done-line:#a8dcc2;
+    --warn-bg:#fdf3dc; --warn-line:#f0dca6;
+    --scrim:rgba(20,24,30,.45);
+    --pri-hover:#1657c9; --strong:#3a424d;
+    --shadow:0 20px 50px rgba(20,24,30,.18);
+  }
+}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column; min-height:100%;
+  }
+  a{color:var(--accent)}
+
+  header{
+    padding:20px 24px; border-bottom:1px solid var(--line);
+    display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;
+  }
+  header h1{font-size:17px;font-weight:650;letter-spacing:-.01em}
+  header .tag{color:var(--dim2);font-size:13px}
+  header .spacer{flex:1}
+  header .badge{
+    font-size:11.5px;color:var(--dim);border:1px solid var(--line);
+    padding:3px 9px;border-radius:999px;white-space:nowrap;
+  }
+  header .badge b{color:var(--good);font-weight:600}
+
+  main{flex:1;width:100%;max-width:1080px;margin:0 auto;padding:24px;display:flex;flex-direction:column;gap:18px}
+
+  /* ---------- dropzone ---------- */
+  #drop{
+    border:1.5px dashed var(--line); border-radius:var(--radius);
+    background:var(--panel); padding:44px 24px; text-align:center;
+    cursor:pointer; transition:.15s; position:relative;
+  }
+  #drop:hover{border-color:#3d4553;background:var(--panel2)}
+  #drop.over{border-color:var(--accent);background:var(--over-bg)}
+  #drop .big{font-size:16px;font-weight:550;margin-bottom:5px}
+  #drop .sub{color:var(--dim2);font-size:13px}
+  #drop .sub kbd{
+    background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;
+    border-radius:5px;padding:1px 5px;font-size:11.5px;font-family:inherit;
+  }
+  #drop input{display:none}
+  body.busy #drop{pointer-events:none;opacity:.45}
+
+  /* ---------- notice / device line ---------- */
+  .line{
+    display:flex;align-items:center;gap:9px;font-size:13px;color:var(--dim);
+    padding:9px 13px;border:1px solid var(--line);border-radius:9px;background:var(--panel);
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--dim2);flex:none}
+  .dot.good{background:var(--good)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+  .dot.load{background:var(--accent);animation:pulse 1.1s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* ---------- queue ---------- */
+  #queue{display:grid;gap:13px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;display:flex;flex-direction:column;
+  }
+  .stage{
+    /* the checkerboard is the standard "this pixel is transparent" cue */
+    background-color:var(--chk-b);
+    background-image:
+      linear-gradient(45deg,var(--chk-a) 25%,transparent 25%,transparent 75%,var(--chk-a) 75%),
+      linear-gradient(45deg,var(--chk-a) 25%,transparent 25%,transparent 75%,var(--chk-a) 75%);
+    background-size:18px 18px;
+    background-position:0 0,9px 9px;
+    aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;
+    position:relative;overflow:hidden;
+  }
+  .stage img{max-width:100%;max-height:100%;object-fit:contain;display:block}
+  .stage .ph{color:var(--dim2);font-size:12.5px}
+  .body{padding:11px 13px 13px;display:flex;flex-direction:column;gap:9px;flex:1}
+  .name{font-size:13px;font-weight:520;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meta{font-size:11.5px;color:var(--dim2);display:flex;gap:8px;flex-wrap:wrap}
+  .meta .ok{color:var(--good)} .meta .err{color:var(--bad)}
+  .bar{height:3px;background:var(--panel2);border-radius:2px;overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+  .bar.hide{visibility:hidden}
+  .swatches{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+  .sw{
+    width:20px;height:20px;border-radius:5px;border:1px solid var(--line);
+    cursor:pointer;padding:0;flex:none;position:relative;
+  }
+  .sw.t{background:
+      linear-gradient(45deg,var(--swchk-a) 25%,transparent 25%,transparent 75%,var(--swchk-a) 75%),
+      linear-gradient(45deg,var(--swchk-a) 25%,transparent 25%,transparent 75%,var(--swchk-a) 75%),
+      var(--swchk-b);
+    background-size:10px 10px;background-position:0 0,5px 5px}
+  .sw.sel{outline:2px solid var(--accent);outline-offset:1px}
+  .sw[data-c="custom"]{overflow:hidden}
+  .sw[data-c="custom"] input{position:absolute;inset:-6px;width:200%;height:200%;border:0;padding:0;cursor:pointer;opacity:0}
+  /* "use your own photo as the backdrop" */
+  .sw.img{
+    background-size:cover;background-position:center;background-repeat:no-repeat;
+    display:grid;place-items:center;font-size:11px;line-height:1;overflow:hidden;
+  }
+  .acts{display:flex;gap:7px;margin-top:auto}
+  button.btn{
+    font:inherit;font-size:12.5px;font-weight:530;color:var(--text);
+    background:var(--panel2);border:1px solid var(--line);border-radius:8px;
+    padding:7px 11px;cursor:pointer;transition:.13s;white-space:nowrap;
+  }
+  button.btn:hover:not(:disabled){background:var(--hover-bg);border-color:var(--hover-line)}
+  button.btn:disabled{opacity:.4;cursor:default}
+  button.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--pri-text);font-weight:600}
+  button.btn.pri:hover:not(:disabled){background:var(--pri-hover);border-color:var(--pri-hover)}
+  button.btn.done{background:var(--done-bg);border-color:var(--done-line);color:var(--good)}
+  button.btn.wide{flex:1;text-align:center}
+
+  /* ---------- modal ---------- */
+  #overlay{
+    position:fixed;inset:0;background:var(--scrim);backdrop-filter:blur(3px);
+    display:none;align-items:center;justify-content:center;padding:22px;z-index:50;
+  }
+  #overlay.on{display:flex}
+  .modal{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    max-width:560px;width:100%;padding:24px;box-shadow:var(--shadow);
+  }
+  .modal h2{font-size:17px;font-weight:640;margin-bottom:5px}
+  .modal .lead{color:var(--dim);font-size:13px;margin-bottom:17px}
+  .opts{display:flex;flex-direction:column;gap:10px}
+  .opt{
+    display:flex;gap:13px;align-items:flex-start;text-align:left;
+    background:var(--panel2);border:1.5px solid var(--line);border-radius:11px;
+    padding:14px;cursor:pointer;transition:.13s;font:inherit;color:inherit;width:100%;
+  }
+  .opt:hover:not(:disabled){border-color:var(--hover-line);background:var(--hover-bg)}
+  .opt[aria-checked="true"]{border-color:var(--accent);background:var(--sel-bg)}
+  .opt:disabled{opacity:.42;cursor:not-allowed}
+  .opt .ico{
+    width:30px;height:30px;border-radius:8px;flex:none;display:grid;place-items:center;
+    font-size:14px;font-weight:700;background:var(--ico-bg);color:var(--dim)
+  }
+  .opt[aria-checked="true"] .ico{background:var(--accent);color:var(--pri-text)}
+  .opt.pro[aria-checked="true"] .ico{background:#b06cf0;color:#150a1f}
+  .opt .t{font-size:14px;font-weight:600;margin-bottom:2px;display:flex;align-items:center;gap:7px}
+  .opt .pill{font-size:10px;font-weight:650;letter-spacing:.03em;padding:2px 6px;border-radius:4px;background:var(--ico-bg);color:var(--dim)}
+  .opt .pill.rec{background:var(--done-bg);color:var(--good)}
+  .opt .d{font-size:12.5px;color:var(--dim);line-height:1.45}
+  .opt .d b{color:var(--strong);font-weight:560}
+  .modal .foot{display:flex;gap:9px;margin-top:17px;align-items:center}
+  .modal .foot .sp{flex:1}
+  .modal .hint{font-size:12px;color:var(--dim2)}
+  .warnbox{
+    margin-top:12px;font-size:12.5px;color:var(--warn);background:var(--warn-bg);
+    border:1px solid var(--warn-line);border-radius:9px;padding:10px 12px;line-height:1.45;
+  }
+
+  footer{
+    padding:16px 24px 26px;text-align:center;color:var(--dim2);font-size:12px;
+    border-top:1px solid var(--line);margin-top:8px;
+  }
+  footer b{color:var(--dim);font-weight:550}
+  @media(max-width:560px){
+    main{padding:16px}
+    header{padding:15px 16px}
+    #drop{padding:32px 16px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Cutout</h1>
+  <span class="tag">Remove backgrounds. Nothing leaves your device.</span>
+  <span class="spacer"></span>
+  <span class="badge">No account · No upload · <b>Free</b></span>
+</header>
+
+<main>
+  <div id="capLine" class="line"><span class="dot" id="capDot"></span><span id="capText">Checking your device…</span></div>
+
+  <div id="drop" tabindex="0" role="button" aria-label="Choose images">
+    <div class="big">Drop images here</div>
+    <div class="sub">or click to browse · or paste with <kbd>⌘V</kbd> — JPG, PNG, WebP, GIF, BMP, AVIF · up to 20 at once</div>
+    <input id="file" type="file" accept="image/*" multiple>
+  </div>
+
+  <div id="modelLine" class="line"><span class="dot load" id="mDot"></span><span id="mText">Preparing the fast model…</span></div>
+
+  <div id="queue"></div>
+
+  <div class="line" id="batch" style="display:none">
+    <span class="dot good"></span>
+    <span id="batchText"></span>
+    <span class="spacer" style="flex:1"></span>
+    <button class="btn" id="batchGo">Download all</button>
+    <button class="btn" id="batchClear">Clear</button>
+  </div>
+</main>
+
+<footer>
+  <b>Your photos are never uploaded.</b> The AI runs inside this tab, so it works offline once loaded and costs nothing to run.
+</footer>
+
+<div id="overlay" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="modal">
+    <h2 id="mTitle">How should I cut <span id="mCount">these</span> out?</h2>
+    <div class="lead">Both run on your device. You can change this for each batch.</div>
+
+    <div class="opts">
+      <button class="opt" id="optFast" role="radio" aria-checked="true">
+        <span class="ico">F</span>
+        <span>
+          <span class="t">FAST <span class="pill rec">DEFAULT</span></span>
+          <span class="d"><b>6.6 MB model.</b> Loads instantly, cuts in about a second, works on any device. Great for people, portraits and simple backgrounds — a little soft on very fine detail like flyaway hair.</span>
+        </span>
+      </button>
+
+      <button class="opt pro" id="optPro" role="radio" aria-checked="false">
+        <span class="ico">P</span>
+        <span>
+          <span class="t">PRO <span class="pill">SLOW · BETTER</span></span>
+          <span class="d"><b>223 MB model, one-time download.</b> Sharper edges on hair, fur and products, and much better on busy or cluttered backgrounds. Needs a capable device, and takes a while per image.</span>
+        </span>
+      </button>
+    </div>
+
+    <div class="warnbox" id="mWarn" style="display:none"></div>
+
+    <div class="foot">
+      <span class="hint" id="mHint"></span>
+      <span class="sp"></span>
+      <button class="btn" id="mCancel">Cancel</button>
+      <button class="btn pri" id="mGo">Cut out</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.webgpu.min.js"></script>
+<script>
+(function(){
+"use strict";
+
+/* ------------------------------------------------------------------ *
+ *  Model definitions.
+ *
+ *  Preprocessing below is taken from each model's own source, not
+ *  guessed:
+ *   - MODNet  Xenova/modnet  preprocessor_config.json
+ *             resize shortest edge 512 (divisible by 32), mean .5 std .5
+ *   - BEN2    PramaLLC/BEN2   onnx_run.py
+ *             Resize((1024,1024)), ToTensor only (plain /255, NO mean/std),
+ *             output min-max normalised then bilinear-resized to original
+ * ------------------------------------------------------------------ */
+const MODELS = {
+  fast: {
+    label: 'FAST',
+    name: 'MODNet',
+    url: 'https://huggingface.co/Xenova/modnet/resolve/main/onnx/model_quantized.onnx',
+    bytes: 6632188,
+    licence: 'Apache-2.0',
+    size: 512,
+    square: false,          // keep aspect ratio
+    normalise: 'mean05',
+    output: 'sigmoid'
+  },
+  pro: {
+    label: 'PRO',
+    name: 'BEN2 base',
+    url: 'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base.onnx',
+    bytes: 222932053,
+    licence: 'MIT',
+    size: 1024,
+    square: true,           // BEN2's own code stretches to 1024x1024
+    normalise: 'unit',
+    output: 'minmax'
+  }
+};
+
+const MAX_FILES = 20;
+const MAX_BYTES = 30 * 1024 * 1024;
+
+ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/';
+ort.env.logLevel = 'error';
+
+/* ---------------------------- state ------------------------------- */
+const $ = s => document.querySelector(s);
+const sessions = {};                 // mode -> ort session (or promise)
+let queue = [];                      // {id,file,url,w,h,status,blob,canvas,colour,el}
+let seq = 0;
+let chosen = 'fast';
+let caps = { webgpu:false, cores:navigator.hardwareConcurrency||4, mem:navigator.deviceMemory||0, good:false };
+
+/* --------------------- capability detection ----------------------- */
+// WebGPU is the big win, but it is not everywhere: Firefox and Safari
+// support is uneven, so we detect and fall back rather than break.
+function detectCaps(){
+  caps.webgpu = !!(navigator.gpu);
+  let score = 0;
+  if (caps.webgpu) score += 2;
+  if (caps.cores >= 8) score += 1;
+  if (caps.cores >= 4) score += 1;
+  if (caps.mem >= 8) score += 1;
+  caps.good = score >= 3;
+
+  const p = [];
+  p.push(caps.webgpu ? 'GPU acceleration on' : 'CPU only (WebGPU unavailable here)');
+  p.push(caps.cores + ' cores');
+  if (caps.mem) p.push('~' + caps.mem + ' GB memory');
+  $('#capText').textContent = p.join(' · ');
+  $('#capDot').className = 'dot ' + (caps.good ? 'good' : 'warn');
+  return caps;
+}
+
+/* ---------------------------- helpers ----------------------------- */
+const fmtBytes = b => b >= 1048576 ? (b/1048576).toFixed(b>=10485760?0:1)+' MB' : (b/1024).toFixed(0)+' KB';
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function makeCanvas(w,h){
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  return c;
+}
+
+// ImageBitmap keeps full resolution and lets canvas do the heavy lifting.
+async function toBitmap(file){
+  if (window.createImageBitmap) {
+    try { return await createImageBitmap(file); } catch(e){}
+  }
+  return await new Promise((res,rej)=>{
+    const img = new Image();
+    img.onload = ()=>res(img);
+    img.onerror = ()=>rej(new Error('Could not read that image'));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+function srcSize(bmp){
+  return { w: bmp.width || bmp.naturalWidth, h: bmp.height || bmp.naturalHeight };
+}
+
+// Resize into a canvas at model resolution, then read the pixels out.
+function rasterise(bmp, tw, th){
+  const c = makeCanvas(tw, th);
+  const ctx = c.getContext('2d', { willReadFrequently:true });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bmp, 0, 0, tw, th);
+  return ctx.getImageData(0, 0, tw, th);
+}
+
+function targetSize(w, h, model){
+  if (model.square) return { w: model.size, h: model.size };
+  // MODNet: shortest edge -> model.size, dimensions divisible by 32.
+  const s = model.size / Math.min(w, h);
+  const r = v => Math.max(32, Math.round(v * s / 32) * 32);
+  return { w: r(w), h: r(h) };
+}
+
+function toTensor(imageData, model){
+  const { data, width, height } = imageData;
+  const n = width * height;
+  const f = new Float32Array(3 * n);
+  const mean05 = model.normalise === 'mean05';
+  for (let i = 0; i < n; i++){
+    const r = data[i*4] / 255, g = data[i*4+1] / 255, b = data[i*4+2] / 255;
+    // CHW layout, as both models expect
+    if (mean05){
+      f[i]        = (r - 0.5) / 0.5;
+      f[n + i]    = (g - 0.5) / 0.5;
+      f[2*n + i]  = (b - 0.5) / 0.5;
+    } else {
+      f[i] = r; f[n + i] = g; f[2*n + i] = b;
+    }
+  }
+  return new ort.Tensor('float32', f, [1, 3, height, width]);
+}
+
+// Turn the model's raw output into a 0..1 coverage map.
+function matteFrom(out, model){
+  const t = out.data;
+  const n = t.length;
+  const m = new Float32Array(n);
+
+  if (model.output === 'sigmoid'){
+    // MODNet emits logits -> sigmoid gives per-pixel alpha.
+    // Guard: if values already sit inside 0..1 it was probably sigmoided
+    // already, so rescaling again would wash the matte out.
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < n; i++){ if(t[i]<lo)lo=t[i]; if(t[i]>hi)hi=t[i]; }
+    const alreadyUnit = lo >= -0.001 && hi <= 1.001;
+    for (let i = 0; i < n; i++){
+      m[i] = alreadyUnit ? t[i] : 1 / (1 + Math.exp(-t[i]));
+    }
+  } else {
+    // BEN2's own postprocess: min-max normalise over the whole map.
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < n; i++){ if(t[i]<lo)lo=t[i]; if(t[i]>hi)hi=t[i]; }
+    const d = (hi - lo) || 1;
+    for (let i = 0; i < n; i++) m[i] = (t[i] - lo) / d;
+  }
+  return m;
+}
+
+/* --------------- matte (model res) -> full-size alpha --------------- */
+// Two canvas passes: model res -> original res, then straight into the
+// alpha channel of the original image. Canvas scaling is GPU accelerated,
+// which beats doing this by hand in JS.
+// Fill the frame with an image without distorting it: scale to cover,
+// then centre — the same rule CSS `background-size: cover` uses.
+function drawCover(ctx, bmp, W, H){
+  const sw = bmp.width || bmp.naturalWidth;
+  const sh = bmp.height || bmp.naturalHeight;
+  const s = Math.max(W / sw, H / sh);
+  const dw = sw * s, dh = sh * s;
+  ctx.drawImage(bmp, (W - dw) / 2, (H - dh) / 2, dw, dh);
+}
+
+function compose(bmp, matte, mw, mh, W, H, bg){
+  const small = makeCanvas(mw, mh);
+  const sctx = small.getContext('2d', { willReadFrequently:true });
+  const mid = sctx.createImageData(mw, mh);
+  for (let i = 0; i < mw*mh; i++){
+    const v = matte[i] <= 0 ? 0 : matte[i] >= 1 ? 255 : Math.round(matte[i]*255);
+    mid.data[i*4] = v; mid.data[i*4+1] = v; mid.data[i*4+2] = v; mid.data[i*4+3] = 255;
+  }
+  sctx.putImageData(mid, 0, 0);
+
+  const big = makeCanvas(W, H);
+  const bctx = big.getContext('2d', { willReadFrequently:true });
+  bctx.imageSmoothingEnabled = true;
+  bctx.imageSmoothingQuality = 'high';
+  bctx.drawImage(small, 0, 0, W, H);
+  const alpha = bctx.getImageData(0, 0, W, H).data;
+
+  // Pass 1: the cut-out itself — original pixels carrying the matte as alpha.
+  const cut = makeCanvas(W, H);
+  const cctx = cut.getContext('2d', { willReadFrequently:true });
+  cctx.drawImage(bmp, 0, 0, W, H);
+  const img = cctx.getImageData(0, 0, W, H);
+  const d = img.data;
+  for (let i = 0; i < W*H; i++){
+    // Coverage map is authored straight into the alpha channel.
+    d[i*4+3] = alpha[i*4];
+  }
+  cctx.putImageData(img, 0, 0);
+
+  if (!bg) return cut;
+
+  // Pass 2: flatten onto the chosen backdrop. The canvas composites the soft
+  // edges for us, and the result is opaque — painting the background first and
+  // then masking the alpha would simply cut the new background away again.
+  const out = makeCanvas(W, H);
+  const octx = out.getContext('2d');
+  if (bg.type === 'image'){
+    drawCover(octx, bg.bmp, W, H);
+  } else {
+    octx.fillStyle = bg.css;
+    octx.fillRect(0, 0, W, H);
+  }
+  octx.drawImage(cut, 0, 0);
+  return out;
+}
+
+function canvasBlob(canvas, type, quality){
+  return new Promise(res => canvas.toBlob(res, type, quality));
+}
+
+/* --------------------------- model load --------------------------- */
+// Fetch by hand so we can show real download progress — a 223 MB
+// download with no feedback feels broken.
+async function fetchWithProgress(url, onProgress){
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Model download failed (' + res.status + ')');
+  const total = +(res.headers.get('content-length') || 0);
+  if (!res.body || !total){
+    return new Uint8Array(await res.arrayBuffer());
+  }
+  const reader = res.body.getReader();
+  const chunks = [];
+  let got = 0;
+  for (;;){
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    got += value.length;
+    onProgress(got / total);
+  }
+  const out = new Uint8Array(got);
+  let at = 0;
+  for (const c of chunks){ out.set(c, at); at += c.length; }
+  return out;
+}
+
+function setModelLine(cls, text){
+  $('#mDot').className = 'dot ' + cls;
+  $('#mText').textContent = text;
+}
+
+function getSession(mode, onProgress){
+  if (sessions[mode]) return sessions[mode];
+
+  const m = MODELS[mode];
+  const p = (async () => {
+    const buf = await fetchWithProgress(m.url, onProgress || (()=>{}));
+
+    // Try WebGPU for the PRO model when it is actually available;
+    // ORT falls back to WASM on its own if the provider is refused.
+    const eps = [];
+    if (mode === 'pro' && caps.webgpu) eps.push('webgpu');
+    eps.push('wasm');
+
+    try {
+      return await ort.InferenceSession.create(buf, {
+        executionProviders: eps,
+        graphOptimizationLevel: 'all'
+      });
+    } catch (err) {
+      if (eps.length > 1){
+        // WebGPU refused the graph — retry cleanly on CPU.
+        return await ort.InferenceSession.create(buf, {
+          executionProviders: ['wasm'],
+          graphOptimizationLevel: 'all'
+        });
+      }
+      throw err;
+    }
+  })();
+
+  sessions[mode] = p;
+  // A failed load must not poison the cache.
+  p.catch(() => { delete sessions[mode]; });
+  return p;
+}
+
+/* -------------------------- processing ---------------------------- */
+async function runOne(item, mode){
+  const m = MODELS[mode];
+  const bmp = item.bmp;
+
+  const t = targetSize(item.w, item.h, m);
+  const small = rasterise(bmp, t.w, t.h);
+  const tensor = toTensor(small, m);
+
+  const sess = await getSession(mode);
+  const feeds = {};
+  feeds[sess.inputNames[0]] = tensor;
+
+  const results = await sess.run(feeds);
+  const out = results[sess.outputNames[0]];
+  const dims = out.dims;
+  const mh = dims[dims.length - 2];
+  const mw = dims[dims.length - 1];
+
+  let matte = matteFrom(out, m);
+  // Some builds hand back a channel-first map; flatten if so.
+  if (matte.length !== mw * mh && matte.length >= mw * mh){
+    matte = matte.subarray(matte.length - mw * mh);
+  }
+
+  // Keep the matte so the colour swatches can re-compose without
+  // running the model again — that is the whole point of caching it.
+  item.matte = matte;
+  item.mw = mw;
+  item.mh = mh;
+  item.canvas = compose(bmp, matte, mw, mh, item.w, item.h, item.bg);
+}
+
+function renderResult(item){
+  const stage = item.el.querySelector('.stage');
+  stage.innerHTML = '';
+  const img = new Image();
+  // A PNG data URL here keeps the checkerboard showing through the holes.
+  img.src = item.canvas.toDataURL('image/png');
+  stage.appendChild(img);
+
+  const sw = item.el.querySelector('.swatches');
+  sw.style.display = 'flex';
+  sw.querySelectorAll('.sw').forEach(b => b.classList.toggle('sel', b.dataset.c === item.bgKey));
+
+  const acts = item.el.querySelector('.acts');
+  acts.style.display = 'flex';
+}
+
+function status(item, cls, text){
+  const meta = item.el.querySelector('.meta');
+  meta.innerHTML = '<span>' + item.w + '×' + item.h + '</span>' +
+    (text ? '<span class="' + cls + '">' + text + '</span>' : '');
+}
+
+function setBar(item, pct){
+  const bar = item.el.querySelector('.bar');
+  const i = bar.querySelector('i');
+  if (pct == null){ bar.classList.add('hide'); return; }
+  bar.classList.remove('hide');
+  i.style.width = Math.max(0, Math.min(100, pct*100)) + '%';
+}
+
+function buildCard(file){
+  const item = {
+    id: ++seq, file, url: URL.createObjectURL(file),
+    w:0, h:0, bmp:null, canvas:null, bg:null, bgKey:'t'
+  };
+
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.innerHTML =
+    '<div class="stage"><span class="ph">Queued</span></div>' +
+    '<div class="body">' +
+      '<div class="name"></div>' +
+      '<div class="meta"></div>' +
+      '<div class="bar hide"><i></i></div>' +
+      '<div class="swatches" style="display:none"></div>' +
+      '<div class="acts" style="display:none"></div>' +
+    '</div>';
+  el.querySelector('.name').textContent = file.name;
+  item.el = el;
+
+  // ---- background: transparent, a colour, or your own image
+  const sw = el.querySelector('.swatches');
+  const setBg = (bg, key) => {
+    item.bg = bg; item.bgKey = key;
+    sw.querySelectorAll('.sw').forEach(b => b.classList.toggle('sel', b.dataset.c === key));
+    if (item.canvas) rerender(item);
+  };
+
+  const COLOURS = [
+    ['t', null], ['w', '#ffffff'], ['k', '#000000'],
+    ['b', '#1f6feb'], ['g', '#3ecf8e'], ['r', '#f0616d']
+  ];
+  COLOURS.forEach(([key, val]) => {
+    const b = document.createElement('button');
+    b.className = 'sw' + (key === 't' ? ' t' : '');
+    b.dataset.c = key;
+    b.title = val ? 'Background ' + val : 'Transparent background';
+    if (val) b.style.background = val;
+    b.onclick = () => setBg(val ? { type:'colour', css:val } : null, key);
+    sw.appendChild(b);
+  });
+
+  const cst = document.createElement('button');
+  cst.className = 'sw'; cst.dataset.c = 'custom'; cst.title = 'Pick a colour';
+  cst.innerHTML = '<input type="color" value="#4c9aff">';
+  cst.querySelector('input').oninput = e => {
+    cst.style.background = e.target.value;
+    setBg({ type:'colour', css:e.target.value }, 'custom');
+  };
+  cst.onclick = e => { if (e.target.tagName !== 'INPUT') cst.querySelector('input').click(); };
+  sw.appendChild(cst);
+
+  // Your own photo as the backdrop.
+  const bsw = document.createElement('button');
+  bsw.className = 'sw img'; bsw.dataset.c = 'image';
+  bsw.title = 'Use your own image as the background';
+  bsw.textContent = '🖼';
+  const binput = document.createElement('input');
+  binput.type = 'file'; binput.accept = 'image/*';
+  binput.style.display = 'none';
+  binput.onchange = async e => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    status(item, '', 'Loading background…');
+    try {
+      const bmp = await toBitmap(f);
+      bsw.style.backgroundImage = 'url(' + URL.createObjectURL(f) + ')';
+      bsw.textContent = '';
+      setBg({ type:'image', bmp, label:f.name }, 'image');
+      status(item, 'ok', 'Background: ' + f.name);
+    } catch (err){
+      status(item, 'err', 'Could not read that background');
+    }
+  };
+  bsw.onclick = () => binput.click();
+  el.appendChild(binput);
+  sw.appendChild(bsw);
+
+  // ---- actions
+  const acts = el.querySelector('.acts');
+  const bPng = document.createElement('button');
+  bPng.className = 'btn pri wide'; bPng.textContent = 'PNG';
+  bPng.title = 'Download the cut-out';
+  bPng.onclick = () => save(item, 'image/png');
+
+  const bJpg = document.createElement('button');
+  bJpg.className = 'btn wide'; bJpg.textContent = 'JPG';
+  bJpg.title = 'Download flattened on the chosen colour';
+  bJpg.onclick = () => save(item, 'image/jpeg');
+
+  const bCp = document.createElement('button');
+  bCp.className = 'btn'; bCp.textContent = 'Copy';
+  bCp.title = 'Copy the image to the clipboard';
+  bCp.onclick = () => copy(item, bCp);
+
+  acts.append(bPng, bJpg, bCp);
+
+  return item;
+}
+
+function rerender(item){
+  if (!item.bmp || !item.matte) return;
+  // Re-compose against the newly chosen background — the matte is cached,
+  // so the model does not run again just to change the backdrop.
+  item.canvas = compose(item.bmp, item.matte, item.mw, item.mh, item.w, item.h, item.bg);
+  renderResult(item);
+}
+
+function safeName(item, ext){
+  const base = item.file.name.replace(/\.[^.]+$/, '').replace(/[^\w\-. ]+/g, '_') || 'image';
+  return base + (ext === 'image/png' ? '-cutout.png' : '-cutout.jpg');
+}
+
+async function save(item, type){
+  let blob;
+  if (type === 'image/jpeg'){
+    // JPEG has no alpha: flatten onto the chosen background, or white.
+    const bg = item.bg || { type:'colour', css:'#ffffff' };
+    const flat = compose(item.bmp, item.matte, item.mw, item.mh, item.w, item.h, bg);
+    blob = await canvasBlob(flat, 'image/jpeg', 0.92);
+  } else {
+    blob = await canvasBlob(item.canvas, 'image/png');
+  }
+  if (!blob) return;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = safeName(item, type);
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+async function copy(item, btn){
+  try {
+    if (!navigator.clipboard || !window.ClipboardItem) throw new Error('unsupported');
+    const blob = await canvasBlob(item.canvas, 'image/png');
+    await navigator.clipboard.write([ new ClipboardItem({ 'image/png': blob }) ]);
+    const old = btn.textContent;
+    btn.textContent = 'Copied'; btn.classList.add('done');
+    setTimeout(() => { btn.textContent = old; btn.classList.remove('done'); }, 1400);
+  } catch (e) {
+    const old = btn.textContent;
+    btn.textContent = 'Copy blocked'; btn.classList.add('done');
+    setTimeout(() => { btn.textContent = old; btn.classList.remove('done'); }, 2200);
+  }
+}
+
+/* ------------------------- pipeline driver ------------------------ */
+async function processAll(mode){
+  document.body.classList.add('busy');
+  let firstOfMode = true;
+
+  for (const item of queue){
+    if (item.done) continue;
+    item.el.querySelector('.stage').innerHTML = '<span class="ph">Reading…</span>';
+    status(item, '', '');
+
+    try {
+      if (!item.bmp){
+        item.bmp = await toBitmap(item.file);
+        const s = srcSize(item.bmp);
+        item.w = s.w; item.h = s.h;
+      }
+      status(item, '', 'Waiting…');
+
+      // First image of a batch carries the model download.
+      if (!sessions[mode]){
+        const m = MODELS[mode];
+        item.el.querySelector('.stage').innerHTML =
+          '<span class="ph">Downloading ' + m.label + ' model…</span>';
+        await getSession(mode, f => {
+          setBar(item, f);
+          if (item.el) {
+            item.el.querySelector('.stage').innerHTML =
+              '<span class="ph">' + m.name + ' — ' + Math.round(f*100) + '% of ' + fmtBytes(m.bytes) + '</span>';
+          }
+          setModelLine('load', 'Fetching ' + m.name + '… ' + Math.round(f*100) + '%');
+        });
+        setBar(item, null);
+        setModelLine('good', m.name + ' ready · ' + fmtBytes(m.bytes) + ' · ' + m.licence);
+      }
+
+      item.el.querySelector('.stage').innerHTML = '<span class="ph">Cutting out…</span>';
+      status(item, '', 'Working…');
+      await sleep(16);          // let the browser paint that state
+
+      // Time the actual inference so the card reports a real number
+      // rather than a claim.
+      const t0 = performance.now();
+      await runOne(item, mode);
+      const secs = (performance.now() - t0) / 1000;
+
+      item.done = true;
+      renderResult(item);
+      status(item, 'ok', (mode === 'pro' ? 'PRO' : 'FAST') + ' · ' + secs.toFixed(2) + ' s');
+    } catch (err){
+      console.error(err);
+      item.el.querySelector('.stage').innerHTML = '<span class="ph">Could not process</span>';
+      status(item, 'err', (err && err.message) ? err.message : 'Failed');
+    }
+  }
+
+  document.body.classList.remove('busy');
+  updateBatchButton();
+}
+
+/* --------------------------- batch bar ---------------------------- */
+// No zip library: that would be ~100 KB of dependency for one button.
+// Browsers already handle a run of downloads, so we just space them out.
+function updateBatchButton(){
+  const done = queue.filter(i => i.done);
+  const bar = $('#batch');
+  if (done.length < 2){ bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  $('#batchText').textContent = done.length + ' images ready';
+}
+
+$('#batchGo').onclick = async function(){
+  const done = queue.filter(i => i.done);
+  this.disabled = true;
+  const old = this.textContent;
+  for (let n = 0; n < done.length; n++){
+    this.textContent = 'Saving ' + (n+1) + '/' + done.length;
+    await save(done[n], 'image/png');
+    await sleep(350);           // browsers throttle bursts of downloads
+  }
+  this.textContent = old;
+  this.disabled = false;
+};
+
+$('#batchClear').onclick = () => {
+  queue.forEach(i => { i.el.remove(); URL.revokeObjectURL(i.url); });
+  queue = [];
+  updateBatchButton();
+};
+
+/* --------------------------- intake ------------------------------- */
+function addFiles(files){
+  const list = Array.from(files).filter(f => {
+    if (!f.type.startsWith('image/')) return false;
+    if (f.size > MAX_BYTES) return false;
+    return true;
+  });
+  if (!list.length) return;
+
+  let added = 0;
+  for (const f of list){
+    if (queue.length >= MAX_FILES) break;
+    const item = buildCard(f);
+    $('#queue').appendChild(item.el);
+    queue.push(item);
+    added++;
+  }
+  if (added) openModal(added);
+}
+
+/* ---------------------------- modal ------------------------------- */
+function openModal(count){
+  chosen = 'fast';
+  $('#mCount').textContent = count === 1 ? 'this image' : (count + ' images');
+  paintOpts();
+
+  const pro = $('#optPro');
+  const warn = $('#mWarn');
+  if (!caps.good && !caps.webgpu){
+    pro.disabled = true;
+    warn.style.display = 'block';
+    warn.textContent = 'PRO is switched off on this device: no GPU acceleration and ' +
+      caps.cores + ' cores. The 1024px model would take far too long here — FAST will handle it well.';
+  } else if (!caps.webgpu){
+    pro.disabled = false;
+    warn.style.display = 'block';
+    warn.textContent = 'No GPU acceleration detected, so PRO will run on the CPU and be slow — ' +
+      'expect minutes per image rather than seconds.';
+  } else {
+    pro.disabled = false;
+    warn.style.display = 'none';
+  }
+
+  $('#mHint').textContent = count > 4 ? count + ' images — PRO will take a while for all of them.' : '';
+  $('#overlay').classList.add('on');
+  $('#mGo').focus();
+}
+
+function paintOpts(){
+  $('#optFast').setAttribute('aria-checked', chosen === 'fast' ? 'true' : 'false');
+  $('#optPro').setAttribute('aria-checked', chosen === 'pro' ? 'true' : 'false');
+}
+
+function closeModal(){ $('#overlay').classList.remove('on'); }
+
+$('#optFast').onclick = () => { chosen = 'fast'; paintOpts(); };
+$('#optPro').onclick = function(){
+  if (this.disabled) return;
+  chosen = 'pro'; paintOpts();
+};
+$('#mCancel').onclick = () => {
+  closeModal();
+  // Cancelling drops everything added by that batch.
+  queue.forEach(it => { if (!it.done) it.el.remove(); });
+  queue = queue.filter(it => it.done);
+};
+$('#mGo').onclick = () => { closeModal(); processAll(chosen); };
+
+document.addEventListener('keydown', e => {
+  if ($('#overlay').classList.contains('on')){
+    if (e.key === 'Escape') $('#mCancel').click();
+    if (e.key === 'Enter') $('#mGo').click();
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      e.preventDefault();
+      if (!$('#optPro').disabled){ chosen = chosen === 'fast' ? 'pro' : 'fast'; paintOpts(); }
+    }
+  }
+});
+
+/* ---------------------------- events ------------------------------ */
+const drop = $('#drop');
+drop.onclick = () => $('#file').click();
+$('#file').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+
+['dragenter','dragover'].forEach(ev =>
+  drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(ev =>
+  drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => {
+  if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+});
+
+// Paste an image straight from the clipboard.
+document.addEventListener('paste', e => {
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  const files = [];
+  for (const it of items){
+    if (it.kind === 'file' && it.type.startsWith('image/')){
+      const f = it.getAsFile();
+      if (f) files.push(f);
+    }
+  }
+  if (files.length){ e.preventDefault(); addFiles(files); }
+});
+
+// Dropping anywhere on the page should work, not just on the box.
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => {
+  e.preventDefault();
+  if (queue.length === 0 && e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files);
+});
+
+/* ---------------------------- startup ----------------------------- */
+detectCaps();
+
+// Warm the small model up in the background so the first cut is instant.
+(async function preload(){
+  try {
+    setModelLine('load', 'Downloading MODNet (6.6 MB) in the background…');
+    await getSession('fast', f => {
+      setModelLine('load', 'MODNet ' + Math.round(f*100) + '%');
+    });
+    setModelLine('good', 'MODNet ready · 6.6 MB · Apache-2.0 · fastest, on every device');
+  } catch (e){
+    setModelLine('bad', 'Could not load MODNet — check your connection, then drop an image to retry');
+    delete sessions.fast;
+  }
+})();
+
+})();
+</script>
+</body>
+</html>
