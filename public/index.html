@@ -228,9 +228,9 @@
   <div class="line" id="batch" style="display:none">
     <span class="dot good"></span>
     <span id="batchText"></span>
-    <span class="spacer" style="flex:1"></span>
-    <button class="btn" id="batchGo">Download all</button>
-    <button class="btn" id="batchClear">Clear</button>
+    <span style="flex:1"></span>
+    <button class="btn pri" id="batchZip">Download .zip</button>
+    <button class="btn" id="batchClear">Clear all</button>
   </div>
 </main>
 
@@ -838,35 +838,165 @@ async function processAll(mode){
   updateBatchButton();
 }
 
-/* --------------------------- batch bar ---------------------------- */
-// No zip library: that would be ~100 KB of dependency for one button.
-// Browsers already handle a run of downloads, so we just space them out.
-function updateBatchButton(){
-  const done = queue.filter(i => i.done);
-  const bar = $('#batch');
-  if (done.length < 2){ bar.style.display = 'none'; return; }
-  bar.style.display = 'flex';
-  $('#batchText').textContent = done.length + ' images ready';
+/* ---------------------------- ZIP writer -------------------------- */
+// PNGs are already compressed, so the archive just stores them as-is.
+// A 60-line store-only writer beats pulling in a 100 KB zip library for
+// what is, in the end, a few headers around bytes we already have.
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++){
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(buf){
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
 }
 
-$('#batchGo').onclick = async function(){
-  const done = queue.filter(i => i.done);
-  this.disabled = true;
-  const old = this.textContent;
-  for (let n = 0; n < done.length; n++){
-    this.textContent = 'Saving ' + (n+1) + '/' + done.length;
-    await save(done[n], 'image/png');
-    await sleep(350);           // browsers throttle bursts of downloads
-  }
-  this.textContent = old;
-  this.disabled = false;
-};
+// ZIP stores timestamps in the old MS-DOS packed format.
+function dosStamp(d){
+  return {
+    time: ((d.getHours() & 31) << 11) | ((d.getMinutes() & 63) << 5) | ((d.getSeconds() / 2) & 31),
+    date: (((d.getFullYear() - 1980) & 127) << 9) | (((d.getMonth() + 1) & 15) << 5) | (d.getDate() & 31)
+  };
+}
 
-$('#batchClear').onclick = () => {
+function makeZip(files){
+  const enc = new TextEncoder();
+  const stamp = dosStamp(new Date());
+  const body = [];      // local headers + file data
+  const central = [];   // central directory records
+  let offset = 0;
+
+  for (const f of files){
+    const name = enc.encode(f.name);
+    const crc = crc32(f.data);
+    const size = f.data.length;
+
+    const lh = new Uint8Array(30 + name.length);
+    const lv = new DataView(lh.buffer);
+    lv.setUint32(0, 0x04034b50, true);       // local file header
+    lv.setUint16(4, 20, true);               // version needed
+    lv.setUint16(6, 0x0800, true);           // UTF-8 filenames
+    lv.setUint16(8, 0, true);                // 0 = stored, no compression
+    lv.setUint16(10, stamp.time, true);
+    lv.setUint16(12, stamp.date, true);
+    lv.setUint32(14, crc, true);
+    lv.setUint32(18, size, true);
+    lv.setUint32(22, size, true);
+    lv.setUint16(26, name.length, true);
+    lv.setUint16(28, 0, true);
+    lh.set(name, 30);
+    body.push(lh, f.data);
+
+    const ch = new Uint8Array(46 + name.length);
+    const cv = new DataView(ch.buffer);
+    cv.setUint32(0, 0x02014b50, true);       // central directory header
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0x0800, true);
+    cv.setUint16(10, 0, true);
+    cv.setUint16(12, stamp.time, true);
+    cv.setUint16(14, stamp.date, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, size, true);
+    cv.setUint32(24, size, true);
+    cv.setUint16(28, name.length, true);
+    cv.setUint16(30, 0, true);               // extra
+    cv.setUint16(32, 0, true);               // comment
+    cv.setUint16(34, 0, true);               // disk
+    cv.setUint16(36, 0, true);               // internal attrs
+    cv.setUint32(38, 0, true);               // external attrs
+    cv.setUint32(42, offset, true);          // where this file starts
+    ch.set(name, 46);
+    central.push(ch);
+
+    offset += lh.length + size;
+  }
+
+  const cdSize = central.reduce((n, c) => n + c.length, 0);
+  const end = new Uint8Array(22);
+  const ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true);         // end of central directory
+  ev.setUint16(8, files.length, true);
+  ev.setUint16(10, files.length, true);
+  ev.setUint32(12, cdSize, true);
+  ev.setUint32(16, offset, true);
+
+  return new Blob([...body, ...central, end], { type: 'application/zip' });
+}
+
+async function downloadZip(){
+  const done = queue.filter(i => i.done);
+  if (!done.length) return;
+
+  const btn = $('#batchZip');
+  const old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Zipping…';
+
+  try {
+    const used = new Set();
+    const files = [];
+    for (const item of done){
+      const blob = await canvasBlob(item.canvas, 'image/png');
+      const data = new Uint8Array(await blob.arrayBuffer());
+      // Two copies of the same file must not overwrite each other.
+      let name = safeName(item, 'image/png');
+      if (used.has(name)){
+        const base = name.replace(/\.png$/, '');
+        let n = 2;
+        while (used.has(base + '-' + n + '.png')) n++;
+        name = base + '-' + n + '.png';
+      }
+      used.add(name);
+      files.push({ name, data });
+    }
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(makeZip(files));
+    a.download = 'cutout-images.zip';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+
+    btn.textContent = 'Saved';
+    setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 1400);
+  } catch (err){
+    console.error(err);
+    btn.textContent = 'Zip failed';
+    setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 2000);
+  }
+}
+
+/* --------------------------- batch bar ---------------------------- */
+function updateBatchButton(){
+  const bar = $('#batch');
+  if (!queue.length){ bar.style.display = 'none'; return; }
+
+  bar.style.display = 'flex';
+  const done = queue.filter(i => i.done).length;
+  $('#batchText').textContent = done
+    ? done + (done === 1 ? ' image ready' : ' images ready')
+    : queue.length + (queue.length === 1 ? ' image' : ' images') + ' waiting';
+
+  const dot = bar.querySelector('.dot');
+  dot.className = 'dot ' + (done ? 'good' : 'load');
+  $('#batchZip').disabled = done === 0;
+}
+
+function clearAll(){
   queue.forEach(i => { i.el.remove(); URL.revokeObjectURL(i.url); });
   queue = [];
   updateBatchButton();
-};
+}
+
+$('#batchZip').onclick = downloadZip;
+$('#batchClear').onclick = clearAll;
 
 /* --------------------------- intake ------------------------------- */
 function addFiles(files){
@@ -885,7 +1015,7 @@ function addFiles(files){
     queue.push(item);
     added++;
   }
-  if (added) openModal(added);
+  if (added){ updateBatchButton(); openModal(added); }
 }
 
 /* ---------------------------- modal ------------------------------- */
@@ -931,8 +1061,13 @@ $('#optPro').onclick = function(){
 $('#mCancel').onclick = () => {
   closeModal();
   // Cancelling drops everything added by that batch.
-  queue.forEach(it => { if (!it.done) it.el.remove(); });
+  queue.forEach(it => {
+    if (it.done) return;
+    it.el.remove();
+    URL.revokeObjectURL(it.url);
+  });
   queue = queue.filter(it => it.done);
+  updateBatchButton();
 };
 $('#mGo').onclick = () => { closeModal(); processAll(chosen); };
 

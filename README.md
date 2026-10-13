@@ -14,7 +14,7 @@ One file: `public/index.html`. No build step, no dependencies to install.
 - Optional background: a colour, or your own photo
 - Exports PNG (keeps transparency) or JPG (flattened)
 - Copy straight to the clipboard
-- Batch download all results
+- Download everything as a `.zip`, or clear the whole batch
 
 ## The two engines
 
@@ -61,6 +61,9 @@ settings.
 ## Notes
 
 - **Theme:** follows the visitor's system light/dark setting automatically.
+- **ZIP export:** written by hand (~60 lines, store-only) rather than pulling in
+  a ~100 KB archive library. PNGs are already compressed, so storing them
+  as-is costs nothing in size and keeps the page dependency-free.
 - **Threads:** without the COOP/COEP headers the page falls back to
   single-threaded WASM by itself, with no error.
 - **WebGPU:** used for PRO when available, with an automatic fallback to WASM.
