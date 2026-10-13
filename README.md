@@ -60,7 +60,14 @@ settings.
 
 ## Notes
 
+- **Startup check:** before downloading anything, the page probes a ~300 byte
+  file on the same host as the models. If HuggingFace is unreachable or down,
+  a red bar appears explaining it, and the 6.6 MB download is skipped rather
+  than failing slowly. "Check again" re-tests and resumes loading.
 - **Theme:** follows the visitor's system light/dark setting automatically.
+- **PRO on any device:** never blocked. On a device without GPU acceleration
+  the dialog warns that it will be slow and may run out of memory, but the
+  visitor can still choose it.
 - **ZIP export:** written by hand (~60 lines, store-only) rather than pulling in
   a ~100 KB archive library. PNGs are already compressed, so storing them
   as-is costs nothing in size and keeps the page dependency-free.
