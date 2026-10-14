@@ -22,7 +22,7 @@ It also costs nothing to run, so there is no reason to limit it.
 ## Features
 
 - Drag, click, paste (⌘V) or drop images — up to **20 at once**, **30 MB each**
-- Choose an engine on upload: **FAST** or **PRO**
+- Choose an engine on upload: **Low**, **Medium** or **High**
 - Transparent PNG at the **full original resolution**, not a capped preview
 - Optional background: a colour from the palette, a custom picker, or your own photo
 - Export PNG (keeps transparency) or JPG (flattened)
@@ -33,24 +33,28 @@ It also costs nothing to run, so there is no reason to limit it.
 - Follows the visitor's system light/dark theme
 - Keyboard and touch accessible
 
-## The two engines
+## The three engines
 
-| | FAST | PRO |
-|---|---|---|
-| Model | MODNet | BEN2 base |
-| Download | 6.6 MB | 223 MB (one-time) |
-| Licence | Apache-2.0 | MIT |
-| Input | 512 px | 1024 px |
-| Measured time | ~0.5 s | ~3.3 s |
-| Best for | people, portraits | hair, fur, products, busy backgrounds |
+| | Low | Medium | High |
+|---|---|---|---|
+| Model | MODNet | BEN2 compact | BEN2 base |
+| Download | 6.3 MB | 124 MB (one-time) | 223 MB (one-time) |
+| Licence | Apache-2.0 | MIT | MIT |
+| Input | 512 px | 1024 px | 1024 px |
+| Best for | people, portraits | the best balance | hair, fur, products, busy backgrounds |
 
-Timings measured on an M5 MacBook Air through WebGPU. FAST is the default
-choice and is good enough for most portraits; PRO is worth the download when
-edges are the hard part.
+**Medium** is BEN2 with its Conv weights quantised to int8: 124 MB instead of 223 MB. It
+is hosted at [Davide531/ben2-int8](https://huggingface.co/Davide531/ben2-int8) and, unlike
+the full model, it runs where the 223 MB version runs out of memory.
 
-PRO is never blocked on weak devices. On a device without GPU acceleration the
-dialog warns that it will be slow and may run out of memory, then lets the
-visitor decide.
+Timings measured on an M5 MacBook Air through WebGPU. Low is the default and enough for
+most portraits; Medium is the best value; High is worth the download when edges are the
+hard part. There is a [model guide](MODEL%20GUIDE.md) for picking between them.
+
+An engine is only offered when the device can actually load it. The page reads the GPU's
+per-allocation limit and, if a model exceeds it, disables that engine and explains why
+rather than starting a download that cannot succeed. High is refused on phones for exactly
+this reason; Medium usually fits.
 
 ## Loading behaviour
 
@@ -69,21 +73,24 @@ Runtime and models come from third-party CDNs at use time:
 | Piece | Source |
 |---|---|
 | MODNet (quantized) | `huggingface.co/Xenova/modnet` |
+| BEN2 compact (int8) | `huggingface.co/Davide531/ben2-int8` |
 | BEN2 base | `huggingface.co/PramaLLC/BEN2` |
 | ONNX Runtime Web 1.22.0 | `cdn.jsdelivr.net/npm/onnxruntime-web` |
 
 ## Privacy
 
 No analytics, no cookies, no accounts, no telemetry. Images are decoded,
-processed and encoded in memory on the visitor's own device. Nothing is
-uploaded, because there is nowhere to upload to — but be aware the page still
-makes the CDN requests listed above, and those reveal to the CDNs that the page
-was used, like any site that loads a library.
+processed and encoded in memory on the visitor's own device. **Cutout does not
+store your pictures** — the site is a static page on GitHub Pages, and the only
+thing it downloads is the model, from Hugging Face, onto your device. Nothing is
+uploaded, because there is nowhere to upload to. Be aware the page still makes
+the CDN requests listed above, and those reveal to the CDNs that the page was
+used, like any site that loads a library.
 
 ## Browser support
 
 - WebGPU is used when available, with an automatic fallback to WebAssembly.
-- Without WebGPU, PRO is far slower. The page says so rather than failing.
+- Without WebGPU, the heavier engines fall back to the processor and are far slower. The page says so rather than failing.
 - WebGPU requires a **secure context**: `https://`, or `localhost`. Plain
   `http://` on a LAN address cannot expose it, even on a Mac.
 - The status line reports the browser's own capability answers. It
@@ -160,14 +167,14 @@ their own licences, and those licences apply to them, not to this repository:
 | Component | Licence |
 |---|---|
 | MODNet model weights | Apache-2.0 |
+| BEN2 compact (int8) | MIT — this project's quantisation of BEN2 |
 | BEN2 model weights | MIT |
 | ONNX Runtime Web | MIT |
 
-Both models are permissive and usable commercially. This is one of the reasons
-they were chosen over alternatives with non-commercial terms.
-
-## Privacy
-We do not store your pictures . The processing happens entirely on your device. We only host the website via GitHub pages and the website pulls the model needed from Hugging Face , downloads it onto your device and nothing leaves your device. 
+All three models are permissive and usable commercially. This is one of the reasons
+they were chosen over alternatives with non-commercial terms: RMBG-1.4 and RMBG-2.0
+require a paid agreement with BRIA, and ISNet's DIS5K dataset terms forbid commercial
+use.
 
 ## Credits
 
