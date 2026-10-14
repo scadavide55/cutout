@@ -60,9 +60,18 @@ settings.
 
 ## Notes
 
-- **Nothing loads until you start.** There is no model preload, so opening the
-  page downloads nothing. The model is fetched the first time a cut-out is
-  actually requested, and cached by the browser after that.
+- **AI loads only when you start.** Neither the ONNX runtime nor a model is
+  loaded on page open. The runtime loads when “Cut out” is pressed, then the
+  selected model loads. A small startup connectivity probe still runs.
+- **Lightweight interface:** system fonts, inline SVGs, no UI framework,
+  external fonts, blur filters, or decorative looping animation. The landing
+  page becomes a compact workspace once images are added.
+- **Browser support, not hardware specs:** the status no longer presents
+  `hardwareConcurrency` as physical CPU cores. WebGPU is checked via an actual
+  adapter request. Plain HTTP LAN addresses cannot expose WebGPU; use
+  `http://localhost:8080/` on the Mac, or HTTPS for other devices.
+- **Retries and previews:** originals appear immediately, unknown dimensions
+  display file size, and failed images can be retried without re-uploading.
 - **Startup check:** a ~300 byte probe on the same host as the models reports
   whether HuggingFace is reachable. If it is down or rate-limiting, a red bar
   explains it rather than letting a 6.6 MB download fail slowly. "Check again"
