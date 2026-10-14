@@ -3,6 +3,7 @@
 Cutout has four engines: **Low**, **Medium**, **High** and **Ultra**. All of them run on your
 device and try your **GPU first**. The CPU is used only as a last resort, and only where it is safe.
 
+
 **Not sure? Start with Low. If the edges are not good enough, change the engine on the result and run
 it again with Medium or High.**
 
@@ -15,6 +16,8 @@ it again with Medium or High.**
 | Objects, products | weak | very good | very good | very good, slightly cleaner |
 | Relative time | fastest | medium | medium-slow | about 2× High |
 | Tested on Galaxy A25 (4 GB) | works, GPU | off | off | off |
+
+## TL;DR : Low=absolute minimum , runs everywhere ; Medium : most balanced , high-level quality while being much faster (high still does better ) ; High : max quality most people need , needs high-end device. Ultra: runs high two times on the same image , so it takes two times the time.  
 
 *Timings are not given as numbers because they depend heavily on your device, and the first run
 includes the one-time model download. As a rough reference on a MacBook Air M5, a 600 × 600 photo took
