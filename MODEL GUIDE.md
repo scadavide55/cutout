@@ -6,13 +6,13 @@ _This guide helps you pick the right engine for the job. As of 14 Oct 2026, Cuto
 
 | | Low | Medium | High | Ultra |
 |---|---|---|---|---|
-| Download | 6.3 MB | 124 MB | 223 MB | 223 MB (shared with High) |
-| Runs on | any device | any device, faster with a GPU | GPU required | fast GPU required |
+| Download | 6.6 MB | 130 MB | 223 MB | 223 MB (shared with High) |
+| Runs on | CPU | computer, faster with WebGPU | GPU required | high-end computer GPU |
 | Speed on a MacBook Air M5 | ~1 s | ~5 s | ~5 s | ~10 s |
 | Portraits | great | great | great | great |
 | Hair, fur, animals | weak | very good | very good | best |
 | Objects, products | weak | very good | very good | best |
-| Works on phones | yes | yes (slower) | no | no |
+| Works on the tested A25 | yes | disabled | disabled | disabled |
 
 _Speeds are for one 600 × 600 photo, measured on one MacBook Air M5, and include loading the model. They will differ on your device, and the first run is slower because the model has to download once._
 
@@ -26,8 +26,8 @@ Uses the MODNet model.
 
 **Medium**
 A compressed version of the High model, just under 60% of its size.
-Pros: Nearly High-level results. In our test on six varied photos, Medium's cutouts overlapped High's by about **98%** on average; on five of the six the overlap was above 99.5%, and the weakest was 91%. Far better than Low on animals and objects. It still runs on phones, where it uses the processor and takes longer.
-Cons: A 124 MB download. On a phone or an older computer it is much slower than on a machine with a GPU. It is the newest engine, so it has seen less real-world use than Low and High.
+Pros: Nearly High-level results. In our test on six varied photos, Medium's cutouts overlapped High's by about **98%** on average; on five of the six the overlap was above 99.5%, and the weakest was 91%. Far better than Low on animals and objects. Uses desktop WebGPU when the buffers fit, or the desktop processor otherwise.
+Cons: A 130 MB download. Its CPU preparation left the Galaxy A25 tab unresponsive in the release check, so **Medium is disabled on mobile**. It is the newest engine and has seen less real-world use than Low and High.
 Uses a compressed version of the BEN2 model.
 _Note: it is still in beta. It was rebuilt on 14 Oct 2026 after an earlier version produced broken cutouts on some photos._
 
@@ -44,6 +44,9 @@ Cons: About twice High's processing time, and the gain over High is **modest, no
 Uses the full BEN2 model, so there is no extra download if you have already used High.
 
 ---
+
+**Image-size safety**
+Accepted images keep their original export resolution. To avoid killing the tab, images are limited to 24 MP on desktop, 12 MP on mobile/low-memory devices, and 8192 pixels per side. Batches are limited to 48 MP on desktop or 24 MP on mobile. Low's inference input is bounded to a 1024-pixel longest edge. Capability checks are conservative hints, not a promise that every GPU driver will work.
 
 **Why not a bigger model?**
 Larger models exist, and BiRefNet is the strongest of the freely usable ones. Its full version currently fails inside the browser's AI runtime, so it is not offered. Other well-known models, such as RMBG-1.4 and RMBG-2.0, require a paid commercial agreement, so Cutout does not use them.

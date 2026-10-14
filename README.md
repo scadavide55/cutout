@@ -12,13 +12,13 @@ static HTML file with inline CSS and JavaScript, plus a tiny service worker.
 
 ## The point
 
-Remove.bg is shutting down in December, and I wanted an alternative that is entirely free
-and private.
+I wanted a background remover that is entirely free and private, without an account,
+a subscription or a server receiving your images.
 
 Most background removers upload your photo to a server, process it there, and then charge
-per image, cap the resolution, watermark the result, or keep copies. Cutout does none of
-that. There is no backend to send anything to, and it costs nothing to run, so there is no
-reason to limit it.
+per image, cap the preview resolution, watermark the result, or keep copies. Cutout has
+no backend and charges nothing for exports. Its image-size limits are only there to keep
+the visitor's own browser tab from running out of memory.
 
 ## Features
 
@@ -31,6 +31,9 @@ reason to limit it.
 - Download the whole batch as one `.zip`, or clear everything at once
 - Retry failed images without picking the files again
 - Hold the eye button on a result to compare against the original
+- Change the engine on a result without uploading again; keep the old cutout if refinement fails
+- Compact engine choices, in-visit engine memory, and mobile-sized export controls
+- Download progress, explicit engine preparation, stalled-download errors, and releasable blob previews
 - Follows the visitor's system light/dark theme
 - Keyboard and touch accessible
 
@@ -39,8 +42,8 @@ reason to limit it.
 | | Low | Medium | High | Ultra |
 |---|---|---|---|---|
 | Model | MODNet | BEN2 compact (int8) | BEN2 base | BEN2 base, two passes |
-| Download | 6.3 MB | 124 MB | 223 MB | 223 MB (shared with High) |
-| Runs on | processor | GPU, or processor on phones | GPU only | GPU only |
+| Download | 6.6 MB | 130 MB | 223 MB | 223 MB (shared with High) |
+| Runs on | processor | desktop GPU, or desktop processor | GPU only | desktop GPU only |
 | Licence | Apache-2.0 | MIT | MIT | MIT |
 | Input | 512 px | 1024 px | 1024 px | 1024 px, twice |
 | Best for | people, portraits | the best balance | hair, fur, products | the cleanest edges, on a fast computer |
@@ -50,8 +53,11 @@ Read the [model guide](MODEL%20GUIDE.md) to choose between them.
 - **Medium** is BEN2 with its weights stored as int8, one scale per output channel. It is
   hosted at [Davide531/ben2-int8](https://huggingface.co/Davide531/ben2-int8). The
   dequantisation is written as plain `Cast` and `Mul` nodes, because ONNX Runtime's WebGPU
-  engine mishandles the standard `DequantizeLinear` operator. It uses the GPU on machines
-  with 8 or more CPU cores and falls back to the processor elsewhere.
+  engine mishandles the standard `DequantizeLinear` operator. It uses desktop WebGPU when
+  there is sufficient buffer headroom, without relying on privacy-clamped CPU-core hints.
+  It falls back to the desktop processor otherwise. **Medium is disabled on mobile**:
+  its CPU preparation left the Galaxy A25 test tab unresponsive, so it is not safe to offer
+  that path as working.
 - **High** needs WebGPU. On the processor its memory use exceeds what a browser tab can
   allocate.
 - **Ultra** runs the High model on the image and on its mirror image, flips the second
@@ -60,15 +66,22 @@ Read the [model guide](MODEL%20GUIDE.md) to choose between them.
   high-end computer (WebGPU, 8+ cores, 8 GB+ memory if reported), and it asks for
   confirmation before it starts.
 
-An engine is only offered when the device can actually load it. The page reads the GPU's
-per-allocation limit and the browser's memory hint and, if a model does not fit, disables
-that engine and says why, rather than starting a download that cannot succeed.
+Conservative guards check the GPU's per-allocation limit with 15% desktop / 25% mobile headroom, mobile status,
+and browser memory hints. Ineligible engines are disabled with a reason. These are safety
+checks, **not a guarantee** that every driver can execute the model. Only one model session
+is retained; switching engines releases the previous graph, while High and Ultra share one.
+
+Decoded images are limited to **24 MP on desktop**, **12 MP on mobile or low-memory devices**,
+and **8192 pixels per side**. A batch is limited to 48 MP on desktop or 24 MP on mobile.
+Accepted images export at their original resolution; oversized images get a readable error,
+not a silent downscale. Low's inference input is bounded to a 1024-pixel longest edge to
+prevent panoramic inputs from creating enormous tensors. Existing input transparency is preserved.
 
 ### What was not possible
 
 BiRefNet (MIT) would be a real step above BEN2 for Ultra. Its full model fails inside
-ONNX Runtime's WebGPU engine (shader errors on 1.24.3 and 1.26.0, out-of-memory on 1.22
-and 1.30). It is not used. RMBG-1.4 and RMBG-2.0 need a paid agreement with BRIA, and
+ONNX Runtime's WebGPU engine (shader errors on 1.24.3 and 1.26.0, and memory failures
+in earlier testing). It is not used. RMBG-1.4 and RMBG-2.0 need a paid agreement with BRIA, and
 ISNet's DIS5K dataset terms forbid commercial use, so they were rejected on licence
 grounds.
 
@@ -98,8 +111,8 @@ Runtime and models come from third-party CDNs at use time:
 > **Why the runtime version is pinned.** ONNX Runtime Web 1.22.0 computed both BEN2 models
 > wrongly on the GPU (a mostly-foreground mask for Medium, stray background for High). The
 > models were fine: run natively they agree. 1.24.3 is the version verified to match.
-> Newer releases (1.30.0 at the time of writing) refuse to build a session for these
-> graphs on WebGPU. Re-test before bumping it.
+> Newer releases have not been validated for this release. Re-test these graphs before
+> changing the pinned runtime.
 
 ## Privacy
 
@@ -112,7 +125,8 @@ that the page was used, like any site that loads a library.
 
 ## Browser support
 
-- WebGPU is used when available. Low always runs on the processor; Medium falls back to it.
+- Low runs on the processor. Medium uses desktop WebGPU or falls back to the desktop processor.
+- On mobile, Medium is disabled after the A25 CPU preparation failure.
 - High and Ultra require WebGPU. Without it they are shown as unavailable.
 - WebGPU requires a **secure context**: `https://`, or `localhost`. Plain `http://` on a
   LAN address cannot expose it, even on a Mac.
@@ -160,19 +174,24 @@ Netlify can send them natively and do not need it.
 
 ## Beta status
 
+See the [14 October 2026 release check](RELEASE%20CHECK.md) for the exact results and
+remaining gaps, and [tests/README.md](tests/README.md) to reproduce the checks.
+
 Verified: portrait cutouts through all four engines on a MacBook Air (M5, WebGPU), output
 alpha and resolution, custom and flat backgrounds, JPG flattening, clipboard output, batch
 ZIP export, and the engine guard on a simulated weak device.
 
-On 14 Oct 2026 an earlier build was tested on a Samsung Galaxy A25 (5 GB RAM). Low worked
-and High crashed the tab, which is why High is now blocked on devices like it. The current
-build has not been re-run on that phone.
+On 14 Oct 2026 the revised build was tested on a Samsung Galaxy A25 (5 GB RAM). Low
+produced clean 600 × 600 cutouts in both first and repeated runs, and the phone layout had
+no horizontal overflow. Medium's CPU preparation did not complete and the tab became
+unresponsive; Medium is therefore disabled on mobile. The final phone check confirmed
+that Medium, High and Ultra are blocked and Low remains usable.
 
 Not yet verified well enough to call stable:
 
-- Phones and GPUs other than the two above, including Medium's GPU path on them.
-- Very large batches with a mix of failures and retries.
-- Safari and Firefox on older hardware.
+- Phones and GPUs other than the two above. Medium is not offered on mobile.
+- High-resolution mixed batches near the decoded-pixel safety limits.
+- Safari, Firefox, and older drivers: full cross-browser inference remains unverified.
 
 Treat results as good enough to use, not as guaranteed. Report bugs in the repository's
 Issues tab.
