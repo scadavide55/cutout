@@ -60,14 +60,19 @@ settings.
 
 ## Notes
 
-- **Startup check:** before downloading anything, the page probes a ~300 byte
-  file on the same host as the models. If HuggingFace is unreachable or down,
-  a red bar appears explaining it, and the 6.6 MB download is skipped rather
-  than failing slowly. "Check again" re-tests and resumes loading.
+- **Nothing loads until you start.** There is no model preload, so opening the
+  page downloads nothing. The model is fetched the first time a cut-out is
+  actually requested, and cached by the browser after that.
+- **Startup check:** a ~300 byte probe on the same host as the models reports
+  whether HuggingFace is reachable. If it is down or rate-limiting, a red bar
+  explains it rather than letting a 6.6 MB download fail slowly. "Check again"
+  re-tests.
 - **Theme:** follows the visitor's system light/dark setting automatically.
 - **PRO on any device:** never blocked. On a device without GPU acceleration
   the dialog warns that it will be slow and may run out of memory, but the
   visitor can still choose it.
+- **Preview tools:** hold the eye button on a result to see the original
+  underneath. On touch devices — which have no hover — it is always visible.
 - **ZIP export:** written by hand (~60 lines, store-only) rather than pulling in
   a ~100 KB archive library. PNGs are already compressed, so storing them
   as-is costs nothing in size and keeps the page dependency-free.
