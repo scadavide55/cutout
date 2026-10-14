@@ -10,10 +10,10 @@ it again with Medium or High.**
 |---|---|---|---|---|
 | Download | 25.9 MB (GPU), 6.6 MB (CPU) | 130 MB | 223 MB | 223 MB, shared with High |
 | Runs on | GPU, CPU fallback | GPU, computer CPU fallback | GPU only | GPU only |
-| Portraits | great | great | great | great |
-| Hair, fur, animals | weak | very good | very good | very good, slightly cleaner |
+| Portraits | very good  | very good | very good | very good |
+| Hair, fur, animals | weak | decent | very good | very good, slightly cleaner |
 | Objects, products | weak | very good | very good | very good, slightly cleaner |
-| Relative time | fastest | medium | medium | about 2× High |
+| Relative time | fastest | medium | medium-slow | about 2× High |
 | Tested on Galaxy A25 (4 GB) | works, GPU | off | off | off |
 
 *Timings are not given as numbers because they depend heavily on your device, and the first run
