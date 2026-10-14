@@ -240,6 +240,37 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
   }
   @media(max-width:360px){header,main{padding-left:14px;padding-right:14px}.hero h1{font-size:36px}.chip{font-size:10px}.studio-foot{flex-wrap:wrap;justify-content:center}}
   @media(pointer:coarse){.sw{width:34px;height:34px}.bgs{gap:10px}}
+  /* Lightweight visual polish: no fonts, image downloads or blur effects. */
+  .hero .eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:7px 13px;letter-spacing:.1em}
+  .hero .eyebrow::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--good)}
+  .studio{box-shadow:var(--shadow)}
+  .choose{box-shadow:0 2px 0 rgba(0,0,0,.1);transition:background .15s,transform .15s}
+  #drop:hover .choose{background:var(--accent-hi);transform:translateY(-1px)}
+  .how article{padding-top:4px}
+  .card-head .pill{border:1px solid var(--line)}
+  .pill.medium,.pill.high,.pill.ultra{color:var(--good);background:var(--done-bg);border-color:var(--done-line)}
+  .acts{flex-wrap:wrap}
+  .acts .refine{flex-basis:100%;font-size:11px;color:var(--dim);min-height:34px;padding:6px;border-style:dashed}
+  .modal{max-width:560px}
+  .opt{padding:13px 15px;gap:12px}
+  .opt .ico{width:36px;height:36px;margin-top:2px}
+  .opt .cost{margin-top:6px;gap:8px}
+  .opt .cost span{background:var(--panel-3);padding:2px 7px;border-radius:5px}
+  .opt .t{margin-bottom:3px}
+  .opt:disabled .d,.opt:disabled .cost{display:none}
+  .opt:disabled .nofit{margin-top:4px;font-size:10px}
+  .opt[aria-checked="true"]::after{content:'✓';margin-left:auto;color:var(--good);font-size:18px}
+  .modal .lead{margin-bottom:16px}
+  .modal .foot{position:sticky;bottom:-30px;background:var(--panel);padding:12px 0 0;margin-top:12px}
+  .modal .guide{margin-top:12px;font-size:11px}
+  @media(max-width:650px){
+    .modal .foot{bottom:-22px;padding-bottom:2px}
+    .opt .tag{font-size:8px}
+    .opt .d{font-size:11px}
+    .modal .eyebrow{font-size:9px}
+    .acts .btn{min-height:44px}
+    .acts .refine{min-height:40px}
+  }
   @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -352,36 +383,33 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
       <button class="opt" id="optLow" role="radio" aria-checked="true">
         <span class="ico">Lo</span>
         <span>
-          <span class="t">Low <span class="tag rec">DEFAULT</span></span>
-          <span class="d">Quick and light, and it runs on anything. Great on people and plain backgrounds; a little soft on very fine detail like flyaway hair.</span>
-          <span class="cost"><span>6.3 MB model</span><span>smallest</span><span>runs everywhere</span></span>
+          <span class="t">Low <span class="tag rec">QUICKEST</span></span>
+          <span class="d">For portraits and simple backgrounds. Small download, soft on fine hair.</span>
+          <span class="cost"><span>6.6 MB</span><span>CPU</span></span>
         </span>
       </button>
-
       <button class="opt" id="optMedium" role="radio" aria-checked="false">
         <span class="ico">M</span>
         <span>
-          <span class="t">Medium <span class="tag">BEST VALUE</span></span>
-          <span class="d">The same model as High, compressed to under 60% of the size. Near-identical edges and nearly as fast on a computer with a GPU. On a phone it uses the processor, so it still works there, just slower.</span>
-          <span class="cost"><span>124 MB model</span><span>~5 s on GPU</span><span>works on phones</span></span>
+          <span class="t">Medium <span class="tag rec">BALANCED</span></span>
+          <span class="d">People, products and pets. Nearly High quality with a smaller download; slower on the CPU.</span>
+          <span class="cost"><span>130 MB</span><span>GPU or CPU</span></span>
         </span>
       </button>
-
       <button class="opt" id="optHigh" role="radio" aria-checked="false">
         <span class="ico">H</span>
         <span>
-          <span class="t">High <span class="tag">SHARPEST</span></span>
-          <span class="d">Full precision. The best edges on hair, fur and products, but a 223 MB download that some phones cannot hold in memory at all.</span>
-          <span class="cost"><span>223 MB model</span><span>~3–8 s on GPU</span><span>needs WebGPU</span></span>
+          <span class="t">High <span class="tag">FINE DETAIL</span></span>
+          <span class="d">Full precision for hair, fur and tricky edges. Needs a capable GPU.</span>
+          <span class="cost"><span>223 MB</span><span>GPU required</span></span>
         </span>
       </button>
-
       <button class="opt" id="optUltra" role="radio" aria-checked="false">
         <span class="ico">U</span>
         <span>
-          <span class="t">Ultra <span class="tag">HIGH-END ONLY</span></span>
-          <span class="d">High, run twice on the image and its mirror, then blended. Settles stray edges and uneven hair. Needs a fast computer; you will be asked to confirm.</span>
-          <span class="cost"><span>223 MB model</span><span>~2× High's time</span><span>fast GPU required</span></span>
+          <span class="t">Ultra <span class="tag">TWO PASSES</span></span>
+          <span class="d">High, refined with a second pass. A modest edge improvement, at twice the processing time.</span>
+          <span class="cost"><span>223 MB · shared with High</span><span>high-end GPU</span></span>
         </span>
       </button>
     </div>
@@ -440,7 +468,7 @@ const MODELS = {
     url: 'https://huggingface.co/Davide531/ben2-int8/resolve/main/ben2-int8-v3.onnx',
     bytes: 130416302, licence: 'MIT',
     size: 1024, square: true, normalise: 'unit', output: 'minmax',
-    gpu: true, gpuMinCores: 8   // GPU on capable machines; phones and weak devices stay on the CPU
+    gpu: true, gpuDesktopOnly: true, desktopOnly: true // mobile CPU preparation was unresponsive on the A25
   },
   high: {
     label: 'High', name: 'BEN2',
@@ -461,6 +489,8 @@ const MODELS = {
 
 const MAX_FILES = 20;
 const MAX_BYTES = 30 * 1024 * 1024;
+const MAX_PIXELS = 24000000; // avoid multi-hundred-MB full-resolution canvas allocations
+const MAX_DIMENSION = 8192; // compatible canvas dimensions, including mobile browsers
 
 // Keep the landing page independent of the AI CDN. Load it on first use only.
 const ORT_BASE = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/';
@@ -496,8 +526,12 @@ const $ = s => document.querySelector(s);
 let sessions = {};            // mode -> ort session (or a promise for one)
 let queue = [];               // result cards, in order
 let seq = 0;
-let chosen = 'low';
-let caps = { webgpu:false, maxBinding:0, cores:navigator.hardwareConcurrency||4, mem:navigator.deviceMemory||0, good:false };
+let chosen = 'low', lastEngine = 'low';
+let caps = { webgpu:false, maxBinding:0, cores:navigator.hardwareConcurrency||4, mem:navigator.deviceMemory||0,
+  mobile: !!(navigator.userAgentData && navigator.userAgentData.mobile) || /Android|iPhone|iPad/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), good:false };
+const usesGPU = m => !!(m.gpu && caps.webgpu && (!m.gpuDesktopOnly || !caps.mobile) &&
+  caps.cores >= (m.gpuMinCores || 0) && (!caps.maxBinding || m.gpuOnly || m.bytes <= caps.maxBinding * (caps.mobile ? 0.75 : 0.85)));
 
 /* ------------------------------- icons ---------------------------- */
 const svg = d => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
@@ -527,7 +561,7 @@ async function detectCaps(){
   catch (e){ caps.webgpu = false; caps.maxBinding = 0; }
   caps.good = caps.webgpu || (caps.cores >= 8 && (!caps.mem || caps.mem >= 4));
   const insecure = !window.isSecureContext;
-  $('#capText').textContent = caps.webgpu ? 'GPU available for High and Ultra · runs locally'
+  $('#capText').textContent = caps.webgpu ? 'GPU detected · engines checked for your device'
     : insecure ? 'CPU mode · HTTP connection' : 'CPU mode · runs locally';
   $('#capDot').className = 'd ' + (caps.webgpu ? 'good' : '');
   $('#capText').title = 'Browser support, not a hardware scan. Low runs on the processor; High and Ultra need WebGPU.';
@@ -543,9 +577,9 @@ async function detectCaps(){
 }
 
 /* ------------------------------ helpers --------------------------- */
-const fmtBytes = b => b >= 1048576
-  ? (b / 1048576).toFixed(b >= 10485760 ? 0 : 1) + ' MB'
-  : (b / 1024).toFixed(0) + ' KB';
+const fmtBytes = b => b >= 1000000
+  ? (b / 1000000).toFixed(b >= 10000000 ? 0 : 1) + ' MB'
+  : (b / 1000).toFixed(0) + ' KB';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 function makeCanvas(w, h){
@@ -580,7 +614,7 @@ function rasterise(bmp, tw, th){
 function targetSize(w, h, model){
   if (model.square) return { w: model.size, h: model.size };
   // MODNet: shortest edge to model.size, dimensions kept divisible by 32.
-  const s = model.size / Math.min(w, h);
+  const s = Math.min(model.size / Math.min(w, h), 1024 / Math.max(w, h));
   const r = v => Math.max(32, Math.round(v * s / 32) * 32);
   return { w: r(w), h: r(h) };
 }
@@ -667,7 +701,7 @@ function compose(bmp, matte, mw, mh, W, H, bg){
   cctx.drawImage(bmp, 0, 0, W, H);
   const img = cctx.getImageData(0, 0, W, H);
   const d = img.data;
-  for (let i = 0; i < W * H; i++) d[i*4+3] = alpha[i*4];   // coverage -> alpha
+  for (let i = 0; i < W * H; i++) d[i*4+3] = Math.round(d[i*4+3] * alpha[i*4] / 255);
   cctx.putImageData(img, 0, 0);
 
   if (!bg) return cut;
@@ -687,38 +721,54 @@ const canvasBlob = (canvas, type, q) => new Promise(res => canvas.toBlob(res, ty
 /* --------------------------- model load --------------------------- */
 // Fetched by hand so a 223 MB download can report real progress.
 async function fetchWithProgress(url, onProgress){
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('Model download failed (' + res.status + ')');
-  const total = +(res.headers.get('content-length') || 0);
-  if (!res.body || !total) return new Uint8Array(await res.arrayBuffer());
-
-  const reader = res.body.getReader();
-  const chunks = [];
-  let got = 0;
-  for (;;){
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    got += value.length;
-    onProgress(got / total);
-  }
-  const out = new Uint8Array(got);
-  let at = 0;
-  for (const c of chunks){ out.set(c, at); at += c.length; }
-  return out;
+  const ctl = new AbortController();
+  let timer;
+  const resetTimer = () => { clearTimeout(timer); timer = setTimeout(() => ctl.abort(), 45000); };
+  resetTimer();
+  try {
+    const res = await fetch(url, { signal:ctl.signal });
+    if (!res.ok) throw new Error('Model download failed (' + res.status + ')');
+    const total = +(res.headers.get('content-length') || 0);
+    if (!res.body || !total) return new Uint8Array(await res.arrayBuffer());
+    if (total > 512 * 1024 * 1024) throw new Error('Unexpected model size. Please try again.');
+    // Write directly into one buffer, rather than retaining chunks plus a copy.
+    const out = new Uint8Array(total);
+    const reader = res.body.getReader();
+    let got = 0;
+    for (;;){
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (got + value.length > total) throw new Error('Model download size did not match. Please retry.');
+      out.set(value, got); got += value.length;
+      resetTimer(); onProgress(got / total);
+    }
+    if (got !== total) throw new Error('Model download was interrupted. Please retry.');
+    return out;
+  } catch (err){
+    if (ctl.signal.aborted) throw new Error('Model download stalled. Check your connection and retry.');
+    throw err;
+  } finally { clearTimeout(timer); }
 }
 
 const sessionKey = mode => MODELS[mode].session || mode;
-function getSession(mode, onProgress){
+function getSession(mode, onProgress, onPrepare){
   const m = MODELS[mode];
   mode = m.session || mode;
   if (sessions[mode]) return sessions[mode];
 
   const p = (async () => {
     await loadRuntime();
+    // Never keep multiple large graphs resident when the visitor changes engine.
+    for (const key of Object.keys(sessions)){
+      if (key === mode) continue;
+      const old = sessions[key];
+      delete sessions[key];
+      try { const session = await old; await session.release(); } catch (e){}
+    }
     const buf = await fetchWithProgress(m.url, onProgress || (() => {}));
+    if (onPrepare) onPrepare();
     const eps = [];
-    if (m.gpu && caps.webgpu && caps.cores >= (m.gpuMinCores || 0)) eps.push('webgpu');
+    if (usesGPU(m)) eps.push('webgpu');
     eps.push('wasm');
     try {
       return await ort.InferenceSession.create(buf, { executionProviders: eps, graphOptimizationLevel: 'all' });
@@ -811,6 +861,8 @@ async function processAll(mode){
   drop.setAttribute('aria-disabled', 'true');
   $('#chooseLabel').textContent = 'Processing your images…';
   $('#batchClear').disabled = true;
+  $('#retryFailed').disabled = true;
+  queue.forEach(item => item.el.querySelectorAll('.acts button').forEach(b => b.disabled = true));
   await capsReady;
   if (!sessions[sessionKey(mode)]) markRunning(MODELS[mode]);
   for (const item of queue){
@@ -821,6 +873,15 @@ async function processAll(mode){
       if (!item.bmp){
         item.bmp = await toBitmap(item.file);
         const s = srcSize(item.bmp);
+        const pixelLimit = caps.mobile || (caps.mem > 0 && caps.mem <= 4) ? 12000000 : MAX_PIXELS;
+        const batchLimit = caps.mobile ? 24000000 : 48000000;
+        const batchPixels = queue.reduce((n, other) => n + (other === item ? 0 : other.w * other.h), 0);
+        if (s.w > MAX_DIMENSION || s.h > MAX_DIMENSION || s.w * s.h > pixelLimit || batchPixels + s.w * s.h > batchLimit){
+          if (item.bmp.close) item.bmp.close();
+          item.bmp = null;
+          throw new Error('This image or batch is too large for safe processing. Use a smaller image (under ' +
+            Math.floor(pixelLimit / 1000000) + ' megapixels and ' + MAX_DIMENSION + ' px per side), or clear the batch and add fewer photos.');
+        }
         item.w = s.w; item.h = s.h;
         setMeta(item, '');
       }
@@ -833,9 +894,12 @@ async function processAll(mode){
         await getSession(mode, f => {
           setProgress(item, f);
           setStage(item, 'working', m.name + ' · ' + Math.round(f * 100) + '% of ' + fmtBytes(m.bytes));
+        }, () => {
+          setProgress(item, null);
+          setStage(item, 'working', usesGPU(m) ? 'Preparing the GPU engine…' : 'Preparing the CPU engine… this can take a moment');
         });
         setProgress(item, null);
-        if (m.gpu && !caps.webgpu){
+        if (m.gpu && !usesGPU(m)){
           setAlert('warn', '<b>' + m.label + ' is using CPU mode.</b> GPU acceleration is unavailable ' +
             'in this browser context. Processing may take a minute or more; your device still has a GPU.');
         } else {
@@ -852,16 +916,25 @@ async function processAll(mode){
       item.done = true;
       item.mode = mode;
       item.secs = secs;
-      showResult(item);
+      await showResult(item);
+      delete item.previousResult;
       clearRunning();                    // we got a result, so nothing was cut off
     } catch (err){
       console.error(err);
-      setStage(item, 'error', 'Could not process this image');
-      setMeta(item, '');
+      const keptPrevious = !!item.previousResult;
+      if (keptPrevious){
+        Object.assign(item, item.previousResult);
+        delete item.previousResult;
+        await showResult(item);
+      } else {
+        setStage(item, 'error', 'Could not process this image');
+        setMeta(item, '');
+      }
       const message = document.createElement('span');
       message.className = 'err';
       // A bare "Failed" helps nobody. Show what actually went wrong.
-      message.textContent = String((err && (err.message || err)) || 'Failed').slice(0, 300);
+      message.textContent = (keptPrevious ? 'Previous cutout kept. ' : '') +
+        String((err && (err.message || err)) || 'Failed').slice(0, 300);
       item.el.querySelector('.meta').appendChild(message);
       setProgress(item, null);
     }
@@ -870,6 +943,9 @@ async function processAll(mode){
   drop.setAttribute('aria-disabled', 'false');
   $('#chooseLabel').textContent = 'Add more images';
   $('#batchClear').disabled = false;
+  $('#retryFailed').disabled = false;
+  queue.forEach(item => item.el.querySelectorAll('.acts button').forEach(b => b.disabled = false));
+  clearRunning();
   updateBatch();
 }
 
@@ -904,12 +980,21 @@ function setMeta(item, extra){
   meta.innerHTML = '<span>' + (item.w && item.h ? item.w + ' × ' + item.h : fmtBytes(item.file.size)) + '</span>' + (extra || '');
 }
 
-function showResult(item){
+async function refreshPreview(item){
+  const canvas = item.canvas;
+  const blob = await canvasBlob(canvas, 'image/png');
+  if (!blob || item.canvas !== canvas || !item.el.isConnected) return;
+  if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+  item.previewUrl = URL.createObjectURL(blob);
+  item.resEl.src = item.previewUrl;
+}
+
+async function showResult(item){
   const stage = item.el.querySelector('.stage');
   stage.classList.remove('working');
   if (item.placeholder){ item.placeholder.remove(); item.placeholder = null; }
 
-  item.resEl.src = item.canvas.toDataURL('image/png');
+  await refreshPreview(item);
   item.resEl.hidden = false;
   stage.classList.add('ready');
 
@@ -935,7 +1020,7 @@ function rerender(item){
   if (!item.bmp || !item.matte) return;
   // Cheap: reuses the cached matte, so no model run.
   item.canvas = compose(item.bmp, item.matte, item.mw, item.mh, item.w, item.h, item.bg);
-  item.resEl.src = item.canvas.toDataURL('image/png');
+  refreshPreview(item);
   syncSwatches(item);
 }
 
@@ -1028,6 +1113,7 @@ function buildCard(file){
   // ---- background choices
   const bgs = el.querySelector('.bgs');
   const setBg = (bg, key) => {
+    if (item.bg && item.bg.type === 'image' && item.bg !== bg && item.bg.bmp.close) item.bg.bmp.close();
     item.bg = bg; item.bgKey = key;
     if (item.canvas) rerender(item); else syncSwatches(item);
   };
@@ -1068,14 +1154,20 @@ function buildCard(file){
     e.target.value = '';
     if (!f) return;
     try {
+      if (f.size > MAX_BYTES) throw new Error('Choose a background image under 30 MB.');
       const bmp = await toBitmap(f);
-      if (item.bg && item.bg.type === 'image' && item.bg.bmp.close) item.bg.bmp.close();
+      const { w, h } = srcSize(bmp);
+      const limit = caps.mobile || (caps.mem > 0 && caps.mem <= 4) ? 12000000 : MAX_PIXELS;
+      if (w > MAX_DIMENSION || h > MAX_DIMENSION || w * h > limit){
+        if (bmp.close) bmp.close();
+        throw new Error('That background image is too large. Choose a smaller one.');
+      }
       if (item.bgUrl) URL.revokeObjectURL(item.bgUrl);
       item.bgUrl = URL.createObjectURL(f);
       bsw.style.backgroundImage = 'url(' + item.bgUrl + ')';
       bsw.innerHTML = '';
       setBg({ type:'image', bmp }, 'image');
-    } catch (err){ console.error(err); }
+    } catch (err){ setAlert('warn', 'Could not use that background. ' + String(err.message || 'Choose another image.')); }
   };
   bsw.onclick = () => binput.click();
   el.appendChild(binput);
@@ -1098,6 +1190,9 @@ function buildCard(file){
     mk('wide', ICON.download, 'JPG', 'Download flattened on the chosen background', () => save(item, 'image/jpeg')),
     mk('', ICON.copy, 'Copy', 'Copy the image to the clipboard', b => copy(item, b))
   );
+  const refine = mk('ghost refine', '', 'Change engine', 'Try another engine without uploading again',
+    () => openModal(1, [], [item]));
+  acts.append(refine);
 
   setMeta(item, '');
   return item;
@@ -1252,6 +1347,7 @@ function updateBatch(){
 function releaseItem(item){
   item.el.remove();
   URL.revokeObjectURL(item.url);
+  if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
   if (item.bgUrl) URL.revokeObjectURL(item.bgUrl);
   if (item.bmp && item.bmp.close) item.bmp.close();
   if (item.bg && item.bg.type === 'image' && item.bg.bmp.close) item.bg.bmp.close();
@@ -1276,15 +1372,15 @@ function addFiles(files){
   if (!list.length){ setAlert('warn', 'Choose an image under 30 MB.'); return; }
   if (queue.length >= MAX_FILES){ setAlert('warn', 'This batch is full. Clear it before adding more images.'); return; }
 
-  let added = 0;
+  const added = [];
   for (const f of list){
     if (queue.length >= MAX_FILES) break;
     const item = buildCard(f);
     $('#queue').appendChild(item.el);
     queue.push(item);
-    added++;
+    added.push(item);
   }
-  if (added){ updateBatch(); openModal(added); }
+  if (added.length){ updateBatch(); openModal(added.length, added); }
 }
 
 /* ------------------------------- dialog --------------------------- */
@@ -1295,21 +1391,31 @@ const ENGINE_BTNS = [['low','optLow'], ['medium','optMedium'], ['high','optHigh'
 // honouring: on phones the attempt has been measured taking the whole tab
 // down instead of failing with an error the visitor could recover from.
 function engineFits(m){
+  if (m.desktopOnly && caps.mobile)
+    return { ok:false, why:'currently supported on computers only; use Low on phones' };
   if (m.gpuOnly && !caps.webgpu)
     return { ok:false, why:'needs WebGPU, which this browser does not offer' };
-  if (m.highEnd && (caps.cores < 8 || (caps.mem > 0 && caps.mem < 8)))
+  if (m.highEnd && (caps.mobile || caps.cores < 8 || (caps.mem > 0 && caps.mem < 8)))
     return { ok:false, why:'needs a high-end computer (8+ CPU cores and a strong GPU)' };
-  if (caps.webgpu && caps.maxBinding && m.bytes > caps.maxBinding * 0.85)
-    return { ok:false, why:'needs ' + fmtBytes(m.bytes) + ' of GPU memory, ' +
-      'but this device allows ' + fmtBytes(caps.maxBinding) + ' per allocation' };
+  if (usesGPU(m) && caps.maxBinding && m.bytes > caps.maxBinding * (caps.mobile ? 0.75 : 0.85))
+    return { ok:false, why:'not enough GPU buffer headroom (model ' + fmtBytes(m.bytes) +
+      '; allocation limit ' + fmtBytes(caps.maxBinding) + ')' };
   if (caps.mem > 0 && caps.mem <= 4 && m.bytes > 150 * 1024 * 1024)
     return { ok:false, why:'this device reports about ' + caps.mem + ' GB of memory, ' +
       'which is not enough for a ' + fmtBytes(m.bytes) + ' model' };
   return { ok:true };
 }
 
-function openModal(count){
-  chosen = 'low';
+let modalAdded = [], modalRerun = [];
+async function openModal(count, added = [], rerun = []){
+  if (document.body.classList.contains('busy')) return;
+  modalAdded = added; modalRerun = rerun;
+  await capsReady;
+  ultraOk = false;
+  $('#mGo').dataset.label = rerun.length ? 'Update cutout' : 'Cut out';
+  $('#mGo').textContent = $('#mGo').dataset.label;
+  $('#mTitle').textContent = rerun.length ? 'Refine your cutout' : 'Choose your cutout';
+  chosen = rerun.length ? rerun[0].mode || 'low' : lastEngine;
   $('#mLead').textContent = (count === 1 ? 'This image stays' : 'These ' + count + ' images stay') +
     ' on this device. Pick the right engine for the job.';
 
@@ -1319,6 +1425,7 @@ function openModal(count){
     $('#' + id).disabled = !fit.ok;
     if (!fit.ok) blocked[key] = fit.why;
   });
+  if (blocked[chosen]) chosen = 'low';
   paintOpts(blocked);
 
   const warn = $('#mWarn');
@@ -1326,13 +1433,11 @@ function openModal(count){
 
   if (names.length){
     warn.style.display = 'block';
-    warn.className = 'warnbox danger';
-    warn.innerHTML = '<b>' + names.join(', ').replace(/, ([^,]*)$/, ' and $1') + (names.length > 1 ? ' are' : ' is') + ' not available on this device.</b> ' +
-      names.map(n => {
-        const k = Object.keys(blocked).find(x => MODELS[x].label === n);
-        return n + ' ' + blocked[k] + '.';
-      }).join(' ') +
-      ' <b>Low always works here.</b>';
+    warn.className = 'warnbox';
+    warn.innerHTML = '<b>Low is the quickest choice here.</b> ' +
+      (blocked.medium ? 'Medium is currently supported on computers only. Use Low on phones.' :
+        !usesGPU(MODELS.medium) ? 'Medium uses the CPU on this device; expect a longer wait.' :
+        'Unavailable engines are dimmed above, with the reason shown.');
   } else if (!caps.webgpu && !caps.good){
     warn.style.display = 'block';
     warn.className = 'warnbox';
@@ -1402,13 +1507,22 @@ $('#mGo').onclick = () => {
     return;
   }
   ultraOk = false; $('#mGo').textContent = $('#mGo').dataset.label || $('#mGo').textContent;
+  lastEngine = chosen;
+  modalRerun.forEach(item => {
+    item.previousResult = { canvas:item.canvas, matte:item.matte, mw:item.mw, mh:item.mh,
+      mode:item.mode, secs:item.secs, done:item.done };
+    item.done = false;
+  });
+  modalRerun = [];
   closeModal(); processAll(chosen);
 };
 $('#mCancel').onclick = () => {
   closeModal();
-  // Cancelling drops everything added by that batch.
-  queue.forEach(it => { if (!it.done) releaseItem(it); });
-  queue = queue.filter(it => it.done);
+  // Cancel only this upload, never earlier failures or a result being refined.
+  modalAdded.forEach(releaseItem);
+  queue = queue.filter(it => !modalAdded.includes(it));
+  modalAdded = []; modalRerun = [];
+  ultraOk = false; $('#mGo').textContent = 'Cut out';
   updateBatch();
 };
 
@@ -1416,7 +1530,7 @@ document.addEventListener('keydown', e => {
   if (!$('#overlay').classList.contains('on')) return;
   if (e.key === 'Escape'){ e.preventDefault(); $('#mCancel').click(); }
   if (e.key === 'Tab'){
-    const controls = Array.from($('#overlay').querySelectorAll('button,input'))
+    const controls = Array.from($('#overlay').querySelectorAll('button,input,a[href]'))
       .filter(el => !el.disabled && el.offsetParent !== null);
     const first = controls[0], last = controls[controls.length - 1];
     if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
