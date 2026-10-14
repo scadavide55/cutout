@@ -1,6 +1,25 @@
 <!doctype html>
 <html lang="en">
 <head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cutout — remove image backgrounds, free and private</title>
+<meta name="description" content="Remove image backgrounds in your browser. No account, no upload, no cost.">
+<meta name="theme-color" content="#111312">
+<link rel="canonical" href="https://scadavide55.github.io/cutout/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cutout">
+<meta property="og:title" content="Cutout — remove image backgrounds, free and private">
+<meta property="og:description" content="Remove image backgrounds in your browser. No account, no upload, no watermark. The AI runs on your own device.">
+<meta property="og:url" content="https://scadavide55.github.io/cutout/">
+<meta property="og:image" content="https://scadavide55.github.io/cutout/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Cutout — remove image backgrounds, free and private">
+<meta name="twitter:description" content="No account, no upload, no watermark. The AI runs on your own device.">
+<meta name="twitter:image" content="https://scadavide55.github.io/cutout/og.png">
 <script>
 /* Pages cannot send the headers that let WebAssembly use several threads, so a tiny
    service worker adds them. It touches nothing else and only ever runs on this site. */
@@ -18,11 +37,6 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
   }).catch(() => {});
 }
 </script>
-
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cutout — remove image backgrounds, free and private</title>
-<meta name="description" content="Remove image backgrounds in your browser. No account, no upload, no cost.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='3' width='12' height='12' rx='3.5' fill='%235aa2ff'/><rect x='9' y='9' width='12' height='12' rx='3.5' fill='none' stroke='%235aa2ff' stroke-width='1.8'/></svg>">
 <style>
   /* System fonts, inline icons, no filters or decorative animation. */
@@ -296,7 +310,7 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
 
   <section class="how" id="how" aria-label="How it works">
     <article><span class="step-no">01</span><h2>Start with an image</h2><p>A portrait, a product, or your next good idea.</p></article>
-    <article><span class="step-no">02</span><h2>Choose your cutout</h2><p>Fast for portraits. Pro for the tricky details.</p></article>
+    <article><span class="step-no">02</span><h2>Choose your cutout</h2><p>Low for portraits. High and Ultra for the tricky details.</p></article>
     <article><span class="step-no">03</span><h2>Make it yours</h2><p>Keep it transparent or give it a new background.</p></article>
   </section>
 
@@ -516,7 +530,7 @@ async function detectCaps(){
   $('#capText').textContent = caps.webgpu ? 'GPU available for High and Ultra · runs locally'
     : insecure ? 'CPU mode · HTTP connection' : 'CPU mode · runs locally';
   $('#capDot').className = 'd ' + (caps.webgpu ? 'good' : '');
-  $('#capText').title = 'Browser support, not a hardware scan. Fast uses the CPU; Pro can use WebGPU.';
+  $('#capText').title = 'Browser support, not a hardware scan. Low runs on the processor; High and Ultra need WebGPU.';
   const hint = $('#capHint');
   hint.hidden = !insecure;
   if (insecure){
@@ -1313,7 +1327,7 @@ function openModal(count){
   if (names.length){
     warn.style.display = 'block';
     warn.className = 'warnbox danger';
-    warn.innerHTML = '<b>' + names.join(' and ') + ' would not fit on this device.</b> ' +
+    warn.innerHTML = '<b>' + names.join(', ').replace(/, ([^,]*)$/, ' and $1') + (names.length > 1 ? ' are' : ' is') + ' not available on this device.</b> ' +
       names.map(n => {
         const k = Object.keys(blocked).find(x => MODELS[x].label === n);
         return n + ' ' + blocked[k] + '.';
@@ -1322,12 +1336,12 @@ function openModal(count){
   } else if (!caps.webgpu && !caps.good){
     warn.style.display = 'block';
     warn.className = 'warnbox';
-    warn.innerHTML = '<b>Fast is recommended in this browser.</b> GPU acceleration is unavailable, ' +
-      'so the heavier engines fall back to the processor and take far longer.';
+    warn.innerHTML = '<b>Low is recommended in this browser.</b> GPU acceleration is unavailable, ' +
+      'so Medium falls back to the processor and takes far longer.';
   } else if (!caps.webgpu){
     warn.style.display = 'block';
     warn.className = 'warnbox';
-    warn.innerHTML = '<b>No GPU here, so heavier engines use the processor.</b> ' +
+    warn.innerHTML = '<b>No GPU here, so Medium uses the processor.</b> ' +
       'It works, but expect tens of seconds per image rather than seconds.';
   } else {
     warn.style.display = 'none';

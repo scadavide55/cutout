@@ -11,7 +11,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 # Only these files are ever served, so the git history, this script, the
 # README and anything else in the folder cannot be fetched from the network.
-SITE = {"index.html", "sw.js", "favicon.ico", "robots.txt"}
+SITE = {"index.html", "sw.js", "og.png", "favicon.ico", "robots.txt"}
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
