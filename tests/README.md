@@ -80,5 +80,5 @@ adb forward tcp:9222 localabstract:chrome_devtools_remote
 
 The runner uses the first Chrome page target, navigates it to the preview, checks the engine
 guards, runs Low twice, checks alpha/resolution/layout, then leaves that test page blank.
-Medium is deliberately not run: its A25 CPU preparation failed in the release investigation.
+Medium is deliberately not run on the phone: it froze the A25 tab even on the GPU. The test asserts it stays off.
 Remove only the forwarding entries created for the test when finished.

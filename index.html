@@ -385,15 +385,15 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
         <span>
           <span class="t">Low <span class="tag rec">QUICKEST</span></span>
           <span class="d">For portraits and simple backgrounds. Small download, soft on fine hair.</span>
-          <span class="cost"><span>6.6 MB</span><span>CPU</span></span>
+          <span class="cost"><span>25.9 MB GPU · 6.6 MB CPU</span><span>GPU first</span></span>
         </span>
       </button>
       <button class="opt" id="optMedium" role="radio" aria-checked="false">
         <span class="ico">M</span>
         <span>
           <span class="t">Medium <span class="tag rec">BALANCED</span></span>
-          <span class="d">People, products and pets. Nearly High quality with a smaller download; slower on the CPU.</span>
-          <span class="cost"><span>130 MB</span><span>GPU or CPU</span></span>
+          <span class="d">People, products and pets. Close to High quality with a smaller download.</span>
+          <span class="cost"><span>130 MB</span><span>GPU first</span></span>
         </span>
       </button>
       <button class="opt" id="optHigh" role="radio" aria-checked="false">
@@ -461,14 +461,16 @@ const MODELS = {
     url: 'https://huggingface.co/Xenova/modnet/resolve/main/onnx/model_quantized.onnx',
     bytes: 6632188, licence: 'Apache-2.0',
     size: 512, square: false, normalise: 'mean05', output: 'sigmoid',
-    gpu: false
+    gpu: true,
+    gpuUrl: 'https://huggingface.co/Xenova/modnet/resolve/main/onnx/model.onnx',
+    gpuBytes: 25888640 // float convolutions run on WebGPU; integer quantized convolutions do not
   },
   medium: {
     label: 'Medium', name: 'BEN2 compact',
     url: 'https://huggingface.co/Davide531/ben2-int8/resolve/main/ben2-int8-v3.onnx',
     bytes: 130416302, licence: 'MIT',
     size: 1024, square: true, normalise: 'unit', output: 'minmax',
-    gpu: true, gpuDesktopOnly: true, desktopOnly: true // mobile CPU preparation was unresponsive on the A25
+    gpu: true, desktopCPUOnly: true // GPU on compatible phones too; never retry their unsafe CPU path
   },
   high: {
     label: 'High', name: 'BEN2',
@@ -530,8 +532,13 @@ let chosen = 'low', lastEngine = 'low';
 let caps = { webgpu:false, maxBinding:0, cores:navigator.hardwareConcurrency||4, mem:navigator.deviceMemory||0,
   mobile: !!(navigator.userAgentData && navigator.userAgentData.mobile) || /Android|iPhone|iPad/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), good:false };
-const usesGPU = m => !!(m.gpu && caps.webgpu && (!m.gpuDesktopOnly || !caps.mobile) &&
-  caps.cores >= (m.gpuMinCores || 0) && (!caps.maxBinding || m.gpuOnly || m.bytes <= caps.maxBinding * (caps.mobile ? 0.75 : 0.85)));
+const gpuBytes = m => m.gpuBytes || m.bytes;
+const gpuFits = m => !!(m.gpu && caps.webgpu && (!caps.maxBinding || gpuBytes(m) <= caps.maxBinding * 0.85) &&
+  !(caps.mem > 0 && caps.mem <= 4 && gpuBytes(m) > 100 * 1024 * 1024));
+const usesGPU = m => gpuFits(m);
+const canUseCPU = m => !m.gpuOnly && !(m.desktopCPUOnly && caps.mobile);
+const modelVariant = (m, gpu) => gpu && m.gpuUrl ? { ...m, url:m.gpuUrl, bytes:m.gpuBytes } : m;
+const sessionBackends = {};
 
 /* ------------------------------- icons ---------------------------- */
 const svg = d => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
@@ -551,7 +558,7 @@ async function detectCaps(){
   // Browser-reported concurrency/memory are hints, NOT physical hardware specs.
   // An exposed WebGPU API alone does not guarantee a usable adapter.
   try {
-    const adapter = navigator.gpu ? await navigator.gpu.requestAdapter() : null;
+    const adapter = navigator.gpu ? await Promise.race([navigator.gpu.requestAdapter(), new Promise(r => setTimeout(() => r(null), 4000))]) : null;
     caps.webgpu = !!adapter;
     // The largest single buffer this GPU will accept. A model weighing more
     // than this cannot be loaded at all, and on phones trying anyway has
@@ -564,7 +571,7 @@ async function detectCaps(){
   $('#capText').textContent = caps.webgpu ? 'GPU detected · engines checked for your device'
     : insecure ? 'CPU mode · HTTP connection' : 'CPU mode · runs locally';
   $('#capDot').className = 'd ' + (caps.webgpu ? 'good' : '');
-  $('#capText').title = 'Browser support, not a hardware scan. Low runs on the processor; High and Ultra need WebGPU.';
+  $('#capText').title = 'Every engine tries compatible WebGPU first. CPU is a last-resort fallback only where it is safe.';
   const hint = $('#capHint');
   hint.hidden = !insecure;
   if (insecure){
@@ -751,37 +758,49 @@ async function fetchWithProgress(url, onProgress){
 }
 
 const sessionKey = mode => MODELS[mode].session || mode;
-function getSession(mode, onProgress, onPrepare){
+function getSession(mode, onProgress, onPrepare, forceCPU = false){
   const m = MODELS[mode];
   mode = m.session || mode;
   if (sessions[mode]) return sessions[mode];
 
   const p = (async () => {
     await loadRuntime();
-    // Never keep multiple large graphs resident when the visitor changes engine.
     for (const key of Object.keys(sessions)){
       if (key === mode) continue;
       const old = sessions[key];
-      delete sessions[key];
+      delete sessions[key]; delete sessionBackends[key];
       try { const session = await old; await session.release(); } catch (e){}
     }
-    const buf = await fetchWithProgress(m.url, onProgress || (() => {}));
-    if (onPrepare) onPrepare();
-    const eps = [];
-    if (usesGPU(m)) eps.push('webgpu');
-    eps.push('wasm');
-    try {
-      return await ort.InferenceSession.create(buf, { executionProviders: eps, graphOptimizationLevel: 'all' });
-    } catch (err){
-      if (eps.length > 1 && !m.gpuOnly){          // WebGPU refused the graph, retry on CPU
-        return await ort.InferenceSession.create(buf, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
+    const gpu = !forceCPU && usesGPU(m);
+    if (!gpu && !canUseCPU(m))
+      throw new Error(m.label + ' needs a compatible GPU on this device. Try Low instead.');
+    let buf;
+    let variant = modelVariant(m, gpu);
+    const create = async provider => {
+      if (!buf){
+        buf = await fetchWithProgress(variant.url, f => onProgress && onProgress(f, variant.bytes));
       }
-      throw err;
+      if (onPrepare) onPrepare(provider);
+      const session = await ort.InferenceSession.create(buf, {
+        executionProviders:[provider], graphOptimizationLevel:'all'
+      });
+      sessionBackends[mode] = provider;
+      return session;
+    };
+    if (gpu){
+      try { return await create('webgpu'); }
+      catch (err){
+        if (!canUseCPU(m))
+          throw new Error(m.label + ' could not start on this GPU. CPU fallback is unsafe here; try Low. ' + String(err.message || err).slice(0,180));
+        if (variant.url !== m.url){ buf = null; variant = m; }
+        return await create('wasm');
+      }
     }
+    return await create('wasm');
   })();
 
   sessions[mode] = p;
-  p.catch(() => { delete sessions[mode]; });   // a failure must not poison the cache
+  p.catch(() => { delete sessions[mode]; delete sessionBackends[mode]; });
   return p;
 }
 
@@ -821,11 +840,22 @@ async function runOne(item, mode){
   const t = targetSize(item.w, item.h, m);
   const tensor = toTensor(rasterise(item.bmp, t.w, t.h), m);
 
-  const sess = await getSession(mode);
-  const feeds = {};
-  feeds[sess.inputNames[0]] = tensor;
+  let sess = await getSession(mode);
+  const infer = async input => {
+    try { return await sess.run({ [sess.inputNames[0]]:input }); }
+    catch (err){
+      const key = sessionKey(mode);
+      if (sessionBackends[key] !== 'webgpu' || !canUseCPU(m)) throw err;
+      // Shader/device failures can occur on the first run, not just at creation.
+      delete sessions[key]; delete sessionBackends[key];
+      try { await sess.release(); } catch (e){}
+      setStage(item, 'working', 'GPU could not finish this engine. Starting CPU fallback…');
+      sess = await getSession(mode, null, null, true);
+      return await sess.run({ [sess.inputNames[0]]:input });
+    }
+  };
 
-  const results = await sess.run(feeds);
+  const results = await infer(tensor);
   const out = results[sess.outputNames[0]];
   const dims = out.dims;
   const mh = dims[dims.length - 2];
@@ -836,7 +866,7 @@ async function runOne(item, mode){
     // Second look at the mirrored picture; the two mattes are averaged, which
     // settles edges where the model changed its mind between the two views.
     const f2 = flipTensor(tensor);
-    const r2 = await sess.run({ [sess.inputNames[0]]: f2 });
+    const r2 = await infer(f2);
     const m2 = matteFrom(r2[sess.outputNames[0]], m);
     const n = Math.min(matte.length, m2.length);
     for (let y = 0; y < mh; y++){
@@ -851,6 +881,7 @@ async function runOne(item, mode){
   }
 
   // Cache the matte so changing the background never re-runs the model.
+  item.backend = sessionBackends[sessionKey(mode)];
   item.matte = matte; item.mw = mw; item.mh = mh;
   item.canvas = compose(item.bmp, matte, mw, mh, item.w, item.h, item.bg);
 }
@@ -891,20 +922,14 @@ async function processAll(mode){
       if (!sessions[sessionKey(mode)]){
         const m = MODELS[mode];
         setStage(item, 'working', 'Downloading the ' + m.name + ' model…');
-        await getSession(mode, f => {
+        await getSession(mode, (f, bytes) => {
           setProgress(item, f);
-          setStage(item, 'working', m.name + ' · ' + Math.round(f * 100) + '% of ' + fmtBytes(m.bytes));
-        }, () => {
+          setStage(item, 'working', m.name + ' · ' + Math.round(f * 100) + '% of ' + fmtBytes(bytes));
+        }, provider => {
           setProgress(item, null);
-          setStage(item, 'working', usesGPU(m) ? 'Preparing the GPU engine…' : 'Preparing the CPU engine… this can take a moment');
+          setStage(item, 'working', provider === 'webgpu' ? 'Preparing the GPU engine…' : 'Preparing CPU fallback…');
         });
         setProgress(item, null);
-        if (m.gpu && !usesGPU(m)){
-          setAlert('warn', '<b>' + m.label + ' is using CPU mode.</b> GPU acceleration is unavailable ' +
-            'in this browser context. Processing may take a minute or more; your device still has a GPU.');
-        } else {
-          setAlert(null);
-        }
       }
 
       setStage(item, 'working', 'Cutting out…');
@@ -912,6 +937,9 @@ async function processAll(mode){
       const t0 = performance.now();
       await runOne(item, mode);
       const secs = (performance.now() - t0) / 1000;
+      if (item.backend === 'wasm'){
+        setAlert('warn', '<b>Using CPU fallback.</b> GPU execution was not available for this engine. Your images still stay on this device.');
+      } else { setAlert(null); }
 
       item.done = true;
       item.mode = mode;
@@ -1005,7 +1033,7 @@ async function showResult(item){
   pill.className = 'pill ' + item.mode;
   pill.textContent = MODELS[item.mode].label;
 
-  setMeta(item, '<span>' + item.secs.toFixed(2) + ' s</span>');
+  setMeta(item, '<span>' + (item.backend === 'webgpu' ? 'GPU' : 'CPU fallback') + '</span><span>' + item.secs.toFixed(2) + ' s</span>');
   item.el.querySelector('.bgs').style.display = 'flex';
   item.el.querySelector('.acts').style.display = 'flex';
   syncSwatches(item);
@@ -1391,19 +1419,15 @@ const ENGINE_BTNS = [['low','optLow'], ['medium','optMedium'], ['high','optHigh'
 // honouring: on phones the attempt has been measured taking the whole tab
 // down instead of failing with an error the visitor could recover from.
 function engineFits(m){
-  if (m.desktopOnly && caps.mobile)
-    return { ok:false, why:'currently supported on computers only; use Low on phones' };
-  if (m.gpuOnly && !caps.webgpu)
-    return { ok:false, why:'needs WebGPU, which this browser does not offer' };
-  if (m.highEnd && (caps.mobile || caps.cores < 8 || (caps.mem > 0 && caps.mem < 8)))
-    return { ok:false, why:'needs a high-end computer (8+ CPU cores and a strong GPU)' };
-  if (usesGPU(m) && caps.maxBinding && m.bytes > caps.maxBinding * (caps.mobile ? 0.75 : 0.85))
-    return { ok:false, why:'not enough GPU buffer headroom (model ' + fmtBytes(m.bytes) +
+  if (usesGPU(m) || canUseCPU(m)) return { ok:true };
+  if (!caps.webgpu)
+    return { ok:false, why:'too heavy for the memory of this device; try Low' };
+  if (caps.mem > 0 && caps.mem <= 4 && gpuBytes(m) > 100 * 1024 * 1024)
+    return { ok:false, why:'insufficient reported memory for this engine; GPU availability alone does not guarantee enough working memory' };
+  if (caps.maxBinding && gpuBytes(m) > caps.maxBinding * 0.85)
+    return { ok:false, why:'not enough GPU buffer headroom (model ' + fmtBytes(gpuBytes(m)) +
       '; allocation limit ' + fmtBytes(caps.maxBinding) + ')' };
-  if (caps.mem > 0 && caps.mem <= 4 && m.bytes > 150 * 1024 * 1024)
-    return { ok:false, why:'this device reports about ' + caps.mem + ' GB of memory, ' +
-      'which is not enough for a ' + fmtBytes(m.bytes) + ' model' };
-  return { ok:true };
+  return { ok:false, why:'needs a compatible GPU; try Low instead' };
 }
 
 let modalAdded = [], modalRerun = [];
@@ -1435,9 +1459,9 @@ async function openModal(count, added = [], rerun = []){
     warn.style.display = 'block';
     warn.className = 'warnbox';
     warn.innerHTML = '<b>Low is the quickest choice here.</b> ' +
-      (blocked.medium ? 'Medium is currently supported on computers only. Use Low on phones.' :
-        !usesGPU(MODELS.medium) ? 'Medium uses the CPU on this device; expect a longer wait.' :
-        'Unavailable engines are dimmed above, with the reason shown.');
+      (blocked.medium ? 'Medium froze a 4 GB phone during testing, so it is off here. Low runs on the GPU of your phone.' :
+        !usesGPU(MODELS.medium) ? 'Medium will use CPU fallback; expect a longer wait.' :
+        'GPU is tried first. Unavailable engines are dimmed with the reason shown.');
   } else if (!caps.webgpu && !caps.good){
     warn.style.display = 'block';
     warn.className = 'warnbox';
@@ -1510,7 +1534,7 @@ $('#mGo').onclick = () => {
   lastEngine = chosen;
   modalRerun.forEach(item => {
     item.previousResult = { canvas:item.canvas, matte:item.matte, mw:item.mw, mh:item.mh,
-      mode:item.mode, secs:item.secs, done:item.done };
+      mode:item.mode, secs:item.secs, done:item.done, backend:item.backend };
     item.done = false;
   });
   modalRerun = [];

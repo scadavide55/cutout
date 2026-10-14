@@ -7,7 +7,7 @@ _This guide helps you pick the right engine for the job. As of 14 Oct 2026, Cuto
 | | Low | Medium | High | Ultra |
 |---|---|---|---|---|
 | Download | 6.6 MB | 130 MB | 223 MB | 223 MB (shared with High) |
-| Runs on | CPU | computer, faster with WebGPU | GPU required | high-end computer GPU |
+| Runs on | GPU first (CPU only as a last resort) | GPU first, CPU fallback on computers | GPU required | high-end computer GPU |
 | Speed on a MacBook Air M5 | ~1 s | ~5 s | ~5 s | ~10 s |
 | Portraits | great | great | great | great |
 | Hair, fur, animals | weak | very good | very good | best |
@@ -27,7 +27,7 @@ Uses the MODNet model.
 **Medium**
 A compressed version of the High model, just under 60% of its size.
 Pros: Nearly High-level results. In our test on six varied photos, Medium's cutouts overlapped High's by about **98%** on average; on five of the six the overlap was above 99.5%, and the weakest was 91%. Far better than Low on animals and objects. Uses desktop WebGPU when the buffers fit, or the desktop processor otherwise.
-Cons: A 130 MB download. Its CPU preparation left the Galaxy A25 tab unresponsive in the release check, so **Medium is disabled on mobile**. It is the newest engine and has seen less real-world use than Low and High.
+Cons: A 130 MB download. On a 4 GB Galaxy A25 it froze the tab even on the GPU in testing, so **Medium is off on low-memory phones**. It is the newest engine and has seen less real-world use than Low and High.
 Uses a compressed version of the BEN2 model.
 _Note: it is still in beta. It was rebuilt on 14 Oct 2026 after an earlier version produced broken cutouts on some photos._
 
@@ -40,7 +40,7 @@ Uses the full BEN2 model.
 **Ultra**
 High, run twice: once on your image and once on its mirror image, then the two results are blended.
 Pros: Settles stray edges and uneven hair where the model changed its mind between the two views. The cleanest result Cutout can produce.
-Cons: About twice High's processing time, and the gain over High is **modest, not dramatic**: it is the same model looking twice, not a bigger model. It is only offered on a high-end computer (WebGPU, 8 or more CPU cores, and 8 GB or more of memory when the browser reports it), and it asks you to confirm before it starts.
+Cons: About twice High's processing time, and the gain over High is **modest, not dramatic**: it is the same model looking twice, not a bigger model. It is only offered on a high-end computer (a compatible WebGPU GPU with enough buffer headroom), and it asks you to confirm before it starts.
 Uses the full BEN2 model, so there is no extra download if you have already used High.
 
 ---

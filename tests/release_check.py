@@ -131,7 +131,7 @@ try:
         except Exception: time.sleep(.2)
     ws=websocket.create_connection(tab['webSocketDebuggerUrl'],timeout=150,suppress_origin=True)
     cmd('Runtime.enable');cmd('Page.enable');cmd('Network.enable');cmd('Page.bringToFront')
-    if PHONE: ws.settimeout(20)
+    if PHONE: ws.settimeout(90 if '--phone-medium' in sys.argv else 20)
     if not PHONE:
         if '--high-end' in sys.argv:
             cmd('Emulation.setHardwareConcurrencyOverride',hardwareConcurrency=10)
@@ -152,8 +152,17 @@ try:
     elif PHONE:
         inject()
         options=ev("Object.fromEntries([...document.querySelectorAll('.opt')].map(o=>[o.id,o.disabled]))")
-        check('phone blocks Medium, High and Ultra',options['optMedium'] and options['optHigh'] and options['optUltra'],options)
-        run('low',45)
+        check('phone engine availability recorded',True,options)
+        run('low',60)
+        meta=ev("document.querySelector('.meta')?document.querySelector('.meta').textContent:''")
+        check('phone Low reports its real backend',('GPU' in meta) or ('CPU fallback' in meta),meta)
+        check('4 GB phone keeps Medium, High and Ultra off',options['optMedium'] and options['optHigh'] and options['optUltra'],options)
+        if '--phone-medium' in sys.argv and not options['optMedium']:
+            ev("document.getElementById('optLow').click()")
+            refine();ev("document.getElementById('optMedium').click();document.getElementById('mGo').click()")
+            wait("!document.body.classList.contains('busy')",240)
+            meta=ev("document.querySelector('.meta')?document.querySelector('.meta').textContent:''")
+            check('phone Medium finished on GPU',('GPU' in meta),meta)
         refine();run('low',30)
         check('phone layout has no horizontal overflow',ev('document.documentElement.scrollWidth <= innerWidth'))
     else:
@@ -229,7 +238,7 @@ try:
         # A genuine failed model request, then retry after unblocking the server.
         cmd('Page.navigate',url=URL+'?retry-test=1')
         wait("!!document.getElementById('file')")
-        cmd('Network.setBlockedURLs',urls=['*model_quantized.onnx*'])
+        cmd('Network.setBlockedURLs',urls=['*model_quantized.onnx*','*modnet/resolve/main/onnx/model.onnx*'])
         inject();click('#mGo');wait("!document.body.classList.contains('busy')",45)
         check('network failure is shown',bool(ev("(document.querySelector('.meta .err')||{}).textContent")))
         cmd('Network.setBlockedURLs',urls=[])

@@ -126,7 +126,7 @@ that the page was used, like any site that loads a library.
 ## Browser support
 
 - Low runs on the processor. Medium uses desktop WebGPU or falls back to the desktop processor.
-- On mobile, Medium is disabled after the A25 CPU preparation failure.
+- Every engine tries WebGPU first; CPU is a last resort, only where safe. Low uses a 25.9 MB float model on the GPU (6.6 MB quantized model as CPU fallback); on the Galaxy A25 it ran on the GPU in about 2 s warm. Medium is off on low-memory phones because it froze the A25 tab.
 - High and Ultra require WebGPU. Without it they are shown as unavailable.
 - WebGPU requires a **secure context**: `https://`, or `localhost`. Plain `http://` on a
   LAN address cannot expose it, even on a Mac.
