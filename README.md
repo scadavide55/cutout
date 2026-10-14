@@ -1,20 +1,36 @@
 # Cutout
 
-A background remover that runs entirely in the browser. No account, no upload,
-no server, no cost — the AI model runs on the visitor's own device, so photos
-never leave their machine.
+**Status: public beta.** Feature-complete and working, but not yet exercised on
+enough real devices — see [Beta status](#beta-status).
 
-One file: `public/index.html`. No build step, no dependencies to install.
+Remove image backgrounds in the browser. Free, no account, no upload: the AI
+model runs on the visitor's own device, so photos never leave it.
 
-## What it does
+No build step, no installed dependencies, no server-side anything. The whole
+site is one static HTML file with inline CSS and JavaScript.
 
-- Drag, click, paste (⌘V) or drop up to 20 images at once
-- On upload, asks which engine to use: **FAST** or **PRO**
-- Outputs a transparent PNG at full original resolution
-- Optional background: a colour, or your own photo
-- Exports PNG (keeps transparency) or JPG (flattened)
-- Copy straight to the clipboard
-- Download everything as a `.zip`, or clear the whole batch
+## The point
+
+Most background removers — Remove.bg among them — upload your photo to a
+server, process it there, and either charge per image, cap the resolution,
+watermark the result, or keep copies. Cutout does none of it. There is no
+backend to send anything to.
+
+It also costs nothing to run, so there is no reason to limit it.
+
+## Features
+
+- Drag, click, paste (⌘V) or drop images — up to **20 at once**, **30 MB each**
+- Choose an engine on upload: **FAST** or **PRO**
+- Transparent PNG at the **full original resolution**, not a capped preview
+- Optional background: a colour from the palette, a custom picker, or your own photo
+- Export PNG (keeps transparency) or JPG (flattened)
+- Copy the result straight to the clipboard as a real PNG
+- Download the whole batch as one `.zip`, or clear everything at once
+- Retry failed images without picking the files again
+- Hold the eye button on a result to compare against the original
+- Follows the visitor's system light/dark theme
+- Keyboard and touch accessible
 
 ## The two engines
 
@@ -23,70 +39,138 @@ One file: `public/index.html`. No build step, no dependencies to install.
 | Model | MODNet | BEN2 base |
 | Download | 6.6 MB | 223 MB (one-time) |
 | Licence | Apache-2.0 | MIT |
-| Input | 512px | 1024px |
+| Input | 512 px | 1024 px |
 | Measured time | ~0.5 s | ~3.3 s |
 | Best for | people, portraits | hair, fur, products, busy backgrounds |
 
-Both are free for commercial use, unlike the popular `@imgly/background-removal`
-package, whose RMBG-1.4 model is non-commercial and whose code is AGPL-3.0.
+Timings measured on an M5 MacBook Air through WebGPU. FAST is the default
+choice and is good enough for most portraits; PRO is worth the download when
+edges are the hard part.
 
-Timings above were measured on an M5 MacBook Air via WebGPU. Devices without
-WebGPU fall back to CPU automatically and PRO will be considerably slower —
-the page warns the visitor when that is the case.
+PRO is never blocked on weak devices. On a device without GPU acceleration the
+dialog warns that it will be slow and may run out of memory, then lets the
+visitor decide.
+
+## Loading behaviour
+
+- **Nothing is preloaded.** Neither the ONNX runtime nor a model is fetched on
+  page open. The runtime loads when “Cut out” is pressed, then the chosen model.
+- **One startup request only:** a ~300 byte probe to the host serving the
+  models, so a Hugging Face outage or rate limit is reported in plain language
+  instead of surfacing as a slow failed download. It holds nothing back if the
+  probe fails — “Check again” retries.
+- **Caching is the browser's, not ours.** The models are served from Hugging
+  Face over the CDN's normal cache headers. There is no service worker and no
+  offline guarantee; a hard reload may re-download.
+
+Runtime and models come from third-party CDNs at use time:
+
+| Piece | Source |
+|---|---|
+| MODNet (quantized) | `huggingface.co/Xenova/modnet` |
+| BEN2 base | `huggingface.co/PramaLLC/BEN2` |
+| ONNX Runtime Web 1.22.0 | `cdn.jsdelivr.net/npm/onnxruntime-web` |
+
+## Privacy
+
+No analytics, no cookies, no accounts, no telemetry. Images are decoded,
+processed and encoded in memory on the visitor's own device. Nothing is
+uploaded, because there is nowhere to upload to — but be aware the page still
+makes the CDN requests listed above, and those reveal to the CDNs that the page
+was used, like any site that loads a library.
+
+## Browser support
+
+- WebGPU is used when available, with an automatic fallback to WebAssembly.
+- Without WebGPU, PRO is far slower. The page says so rather than failing.
+- WebGPU requires a **secure context**: `https://`, or `localhost`. Plain
+  `http://` on a LAN address cannot expose it, even on a Mac.
+- The status line reports the browser's own capability answers. It
+  deliberately does not display CPU count or RAM: browsers clamp those values,
+  so they would be misleading rather than informative.
 
 ## Run it locally
 
+Two optional servers are included for local testing. Neither is needed to
+deploy — they exist because browsers restrict some features on `file://` pages.
+
 ```sh
-python3 server.py 8080
-# then open http://127.0.0.1:8080/
+python3 server.py 8080          # this machine only, http://127.0.0.1:8080/
+python3 server_lan.py 8080      # also reachable from a phone on the same Wi-Fi
 ```
 
-`server.py` exists because browsers restrict some features on `file://` pages.
-It also sends `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy`,
-which enable multi-threaded WebAssembly and make inference faster.
+Both send `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy`,
+which enable multi-threaded WebAssembly and speed up inference. `server_lan.py`
+binds to `0.0.0.0` and prints the LAN address to open on a phone.
 
 ## Deploy
 
-The whole site is one static file, so any static host works.
+Any static host works; the site is one HTML file.
 
-**GitHub Pages:** move `public/index.html` to the repo root (or set Pages to
-serve the `/public` folder), commit, and enable Pages in the repository
-settings.
+**GitHub Pages** (free for public repositories):
 
-> **Note on hosting:** GitHub Pages cannot send custom headers, so
-> multi-threading will be off there and inference will be slower than the
-> numbers above. Cloudflare Pages and Netlify let you set the two COOP/COEP
-> headers, which restores it. Single-threaded still works fine everywhere.
+1. Keep `index.html` at the **repository root**.
+2. Push to the `main` branch.
+3. Settings → Pages → Source: *Deploy from a branch* → Branch: `main` → Folder: **`/ (root)`**.
 
-## Notes
+The folder picker offers only `/ (root)` and `/docs`. A subfolder such as
+`/public` cannot be selected — which is why the file lives at the root.
 
-- **AI loads only when you start.** Neither the ONNX runtime nor a model is
-  loaded on page open. The runtime loads when “Cut out” is pressed, then the
-  selected model loads. A small startup connectivity probe still runs.
-- **Lightweight interface:** system fonts, inline SVGs, no UI framework,
-  external fonts, blur filters, or decorative looping animation. The landing
-  page becomes a compact workspace once images are added.
-- **Browser support, not hardware specs:** the status no longer presents
-  `hardwareConcurrency` as physical CPU cores. WebGPU is checked via an actual
-  adapter request. Plain HTTP LAN addresses cannot expose WebGPU; use
-  `http://localhost:8080/` on the Mac, or HTTPS for other devices.
-- **Retries and previews:** originals appear immediately, unknown dimensions
-  display file size, and failed images can be retried without re-uploading.
-- **Startup check:** a ~300 byte probe on the same host as the models reports
-  whether HuggingFace is reachable. If it is down or rate-limiting, a red bar
-  explains it rather than letting a 6.6 MB download fail slowly. "Check again"
-  re-tests.
-- **Theme:** follows the visitor's system light/dark setting automatically.
-- **PRO on any device:** never blocked. On a device without GPU acceleration
-  the dialog warns that it will be slow and may run out of memory, but the
-  visitor can still choose it.
-- **Preview tools:** hold the eye button on a result to see the original
-  underneath. On touch devices — which have no hover — it is always visible.
-- **ZIP export:** written by hand (~60 lines, store-only) rather than pulling in
-  a ~100 KB archive library. PNGs are already compressed, so storing them
-  as-is costs nothing in size and keeps the page dependency-free.
-- **Threads:** without the COOP/COEP headers the page falls back to
-  single-threaded WASM by itself, with no error.
-- **WebGPU:** used for PRO when available, with an automatic fallback to WASM.
-- **Privacy:** no analytics, no cookies, no network requests after the models
-  are cached. Photos are handled only in memory on the visitor's device.
+> **Note on hosting:** GitHub Pages cannot send custom response headers, so the
+> COOP/COEP headers are missing there and the page runs single-threaded WASM,
+> which is noticeably slower than the numbers above. It still works correctly.
+> Cloudflare Pages and Netlify allow those two headers and restore
+> multi-threading.
+
+## How it is built
+
+- **One file.** `index.html` holds the markup, CSS and JavaScript. No
+  framework, no bundler, no npm install, no generated output.
+- **System fonts and inline SVG** for the interface. No web fonts, no icon
+  library, no decorative looping animation.
+- **Hand-written ZIP writer** (~60 lines, store-only, CRC-32) instead of a
+  ~100 KB archive library. The PNGs are already compressed, so storing them
+  costs nothing in size.
+- **Interface states.** The landing page collapses into a compact workspace
+  once images are added; originals show immediately while processing runs.
+
+## Beta status
+
+What is verified: portrait cutouts through both engines, output alpha and
+resolution, custom and flat backgrounds, JPG flattening, clipboard output, and
+batch ZIP export.
+
+What is not yet verified well enough to call stable:
+
+- Real phone testing. Phone layout is checked at several widths, but PRO
+  runtime and the file picker on an actual handset have not been measured.
+- Very large batches with a mix of failures and retries.
+- Safari and Firefox on older hardware.
+
+Treat results as good enough to use, not as guaranteed. Report bugs in the
+repository's Issues tab.
+
+## Licence
+
+The website code in this repository is **Apache-2.0** — see [LICENSE](LICENSE).
+
+The models and libraries Cutout downloads at runtime are separate works under
+their own licences, and those licences apply to them, not to this repository:
+
+| Component | Licence |
+|---|---|
+| MODNet model weights | Apache-2.0 |
+| BEN2 model weights | MIT |
+| ONNX Runtime Web | MIT |
+
+Both models are permissive and usable commercially. This is one of the reasons
+they were chosen over alternatives with non-commercial terms.
+
+## Credits
+
+Built by **scadavide55**.
+
+Model weights by the MODNet and BEN2 authors, repackaged for the browser by
+[Xenova](https://huggingface.co/Xenova) (MODNet) and
+[PramaLLC](https://huggingface.co/PramaLLC) (BEN2). Inference powered by
+[ONNX Runtime Web](https://onnxruntime.ai/).
