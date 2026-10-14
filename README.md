@@ -12,7 +12,7 @@ There is no build step, no dependency and no backend: one static `index.html` (i
 JavaScript) plus a tiny service worker.
 
 ## Why it exists
-
+**Main Reason : remove.bg is going away and wanted to make my own alternative.**
 Most background removers upload your photo to a server, then cap the resolution, add a
 watermark, ask for an account or charge per image. Cutout has no server to receive anything
 and charges nothing. Its size limits exist only to keep your own browser tab from running out of
