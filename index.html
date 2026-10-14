@@ -179,6 +179,9 @@
   .opt .tag.rec{background:var(--done-bg);color:var(--good)}
   .opt .d{display:block;font-size:12px;line-height:1.65;color:var(--dim)}
   .opt .cost{display:flex;gap:10px;margin-top:9px;flex-wrap:wrap;font-size:10px;color:var(--dim-2)}
+  .opt .nofit{display:block;margin-top:8px;font-size:11px;line-height:1.5;color:var(--bad)}
+  .opt:disabled{opacity:.55;cursor:not-allowed}
+  .opt:disabled:hover{border-color:var(--line)}
   .modal .foot{display:flex;gap:9px;margin-top:23px;align-items:center}
   .modal .hint{font-size:11px;color:var(--dim-2);max-width:150px}
   .warnbox{margin-top:14px;font-size:12px;color:var(--warn);background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:10px;padding:12px;line-height:1.6}
@@ -308,24 +311,33 @@
   <div class="modal">
     <div class="eyebrow">Your image. Your choice.</div>
     <h2 id="mTitle">Choose your cutout</h2>
-    <div class="lead"><span id="mCount">Your images</span> stay on this device. Pick the right engine for the job.</div>
+    <div class="lead" id="mLead">Your images stay on this device. Pick the right engine for the job.</div>
 
     <div class="opts" role="radiogroup" aria-label="Cutout engine">
-      <button class="opt" id="optFast" role="radio" aria-checked="true">
-        <span class="ico">F</span>
+      <button class="opt" id="optLow" role="radio" aria-checked="true">
+        <span class="ico">Lo</span>
         <span>
-          <span class="t">Fast <span class="tag rec">DEFAULT</span></span>
-          <span class="d">Great on people, portraits and clean backgrounds. A little soft on very fine detail like flyaway hair.</span>
-          <span class="cost"><span>6.6 MB model</span><span>Small &amp; quick</span><span>CPU friendly</span></span>
+          <span class="t">Low <span class="tag rec">DEFAULT</span></span>
+          <span class="d">Quick and light, and it runs on anything. Great on people and plain backgrounds; a little soft on very fine detail like flyaway hair.</span>
+          <span class="cost"><span>6.3 MB model</span><span>smallest</span><span>runs everywhere</span></span>
         </span>
       </button>
 
-      <button class="opt pro" id="optPro" role="radio" aria-checked="false">
-        <span class="ico">P</span>
+      <button class="opt" id="optMedium" role="radio" aria-checked="false">
+        <span class="ico">M</span>
         <span>
-          <span class="t">Pro <span class="tag">SLOWER · SHARPER</span></span>
-          <span class="d">Much better on hair, fur, products and busy backgrounds. Costs a one-time download and takes longer per image.</span>
-          <span class="cost"><span>223 MB model</span><span>~3 s with a GPU</span><span>one-time download</span></span>
+          <span class="t">Medium <span class="tag">BEST VALUE</span></span>
+          <span class="d">The same model as High, compressed to less than half the size. Nearly identical edges, and it still fits on a phone.</span>
+          <span class="cost"><span>124 MB model</span><span>one-time download</span><span>runs on phones</span></span>
+        </span>
+      </button>
+
+      <button class="opt" id="optHigh" role="radio" aria-checked="false">
+        <span class="ico">H</span>
+        <span>
+          <span class="t">High <span class="tag">SHARPEST</span></span>
+          <span class="d">Full precision. The best edges on hair, fur and products, but a 223 MB download that some phones cannot hold in memory at all.</span>
+          <span class="cost"><span>223 MB model</span><span>~3 s on desktop</span><span>desktop preferred</span></span>
         </span>
       </button>
     </div>
@@ -348,24 +360,48 @@
 /* ------------------------------------------------------------------ *
  *  Models. Preprocessing is taken from each model's own source, not
  *  guessed:
- *   MODNet  Xenova/modnet  preprocessor_config.json
- *           shortest edge 512 (divisible by 32), mean .5 std .5
- *   BEN2    PramaLLC/BEN2  onnx_run.py
- *           Resize((1024,1024)), plain /255 with NO mean/std,
- *           output min-max normalised, then bilinear to original size
+ *   MODNet   Xenova/modnet  preprocessor_config.json
+ *            shortest edge 512 (divisible by 32), mean .5 std .5,
+ *            output already 0..1
+ *   BEN2 compact  quantised from PramaLLC/BEN2 by this project
+ *            weight-only int8 (160 Conv weights), otherwise identical:
+ *            1024x1024 square, /255 with no mean/std, min-max output.
+ *            130 MB instead of 223 MB, and it fits in memory where the
+ *            full model dies with std::bad_alloc.
+ *   BEN2     PramaLLC/BEN2  onnx_run.py
+ *            Resize((1024,1024)), plain /255 with NO mean/std,
+ *            output min-max normalised, then bilinear to original size
+ *
+ *  Rejected on licence grounds, not on quality: RMBG-1.4 and RMBG-2.0
+ *  (commercial use needs a paid agreement with BRIA) and ISNet (its
+ *  DIS5K dataset terms forbid commercial use). BiRefNet is MIT but out
+ *  of memory in this runtime at 1024x1024, in both precisions.
+ *
+ *  bytes is checked against the device's GPU allocation limit before a
+ *  download starts: BEN2 at 223 MB exceeds the 256 MB limit on some
+ *  phones and takes the whole tab down with it.
  * ------------------------------------------------------------------ */
 const MODELS = {
-  fast: {
-    label: 'Fast', name: 'MODNet',
+  low: {
+    label: 'Low', name: 'MODNet',
     url: 'https://huggingface.co/Xenova/modnet/resolve/main/onnx/model_quantized.onnx',
     bytes: 6632188, licence: 'Apache-2.0',
-    size: 512, square: false, normalise: 'mean05', output: 'sigmoid'
+    size: 512, square: false, normalise: 'mean05', output: 'sigmoid',
+    gpu: false
   },
-  pro: {
-    label: 'Pro', name: 'BEN2',
+  medium: {
+    label: 'Medium', name: 'BEN2 compact',
+    url: 'https://huggingface.co/scadavide55/ben2-int8/resolve/main/ben2-int8.onnx',
+    bytes: 130023798, licence: 'MIT',
+    size: 1024, square: true, normalise: 'unit', output: 'minmax',
+    gpu: true
+  },
+  high: {
+    label: 'High', name: 'BEN2',
     url: 'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base.onnx',
     bytes: 222932053, licence: 'MIT',
-    size: 1024, square: true, normalise: 'unit', output: 'minmax'
+    size: 1024, square: true, normalise: 'unit', output: 'minmax',
+    gpu: true
   }
 };
 
@@ -406,8 +442,8 @@ const $ = s => document.querySelector(s);
 let sessions = {};            // mode -> ort session (or a promise for one)
 let queue = [];               // result cards, in order
 let seq = 0;
-let chosen = 'fast';
-let caps = { webgpu:false, cores:navigator.hardwareConcurrency||4, mem:navigator.deviceMemory||0, good:false };
+let chosen = 'low';
+let caps = { webgpu:false, maxBinding:0, cores:navigator.hardwareConcurrency||4, mem:navigator.deviceMemory||0, good:false };
 
 /* ------------------------------- icons ---------------------------- */
 const svg = d => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" ' +
@@ -426,8 +462,15 @@ const ICON = {
 async function detectCaps(){
   // Browser-reported concurrency/memory are hints, NOT physical hardware specs.
   // An exposed WebGPU API alone does not guarantee a usable adapter.
-  try { caps.webgpu = !!(navigator.gpu && await navigator.gpu.requestAdapter()); }
-  catch (e){ caps.webgpu = false; }
+  try {
+    const adapter = navigator.gpu ? await navigator.gpu.requestAdapter() : null;
+    caps.webgpu = !!adapter;
+    // The largest single buffer this GPU will accept. A model weighing more
+    // than this cannot be loaded at all, and on phones trying anyway has
+    // been observed to kill the tab rather than fail cleanly.
+    caps.maxBinding = adapter ? adapter.limits.maxStorageBufferBindingSize : 0;
+  }
+  catch (e){ caps.webgpu = false; caps.maxBinding = 0; }
   caps.good = caps.webgpu || (caps.cores >= 8 && (!caps.mem || caps.mem >= 4));
   const insecure = !window.isSecureContext;
   $('#capText').textContent = caps.webgpu ? 'GPU available for Pro · runs locally'
@@ -492,13 +535,19 @@ function toTensor(imageData, model){
   const { data, width, height } = imageData;
   const n = width * height;
   const f = new Float32Array(3 * n);
-  const mean05 = model.normalise === 'mean05';
+  const mode = model.normalise;
+  // BiRefNet's preprocessor_config.json: rescale 1/255, then ImageNet mean/std.
+  const M = [0.485, 0.456, 0.406], S = [0.229, 0.224, 0.225];
   for (let i = 0; i < n; i++){
     const r = data[i*4] / 255, g = data[i*4+1] / 255, b = data[i*4+2] / 255;
-    if (mean05){                       // CHW, ±1
+    if (mode === 'mean05'){            // CHW, ±1
       f[i]       = (r - 0.5) / 0.5;
       f[n + i]   = (g - 0.5) / 0.5;
       f[2*n + i] = (b - 0.5) / 0.5;
+    } else if (mode === 'imagenet'){   // CHW, ImageNet normalised
+      f[i]       = (r - M[0]) / S[0];
+      f[n + i]   = (g - M[1]) / S[1];
+      f[2*n + i] = (b - M[2]) / S[2];
     } else {                           // CHW, 0..1
       f[i] = r; f[n + i] = g; f[2*n + i] = b;
     }
@@ -604,7 +653,7 @@ function getSession(mode, onProgress){
     await loadRuntime();
     const buf = await fetchWithProgress(m.url, onProgress || (() => {}));
     const eps = [];
-    if (mode === 'pro' && caps.webgpu) eps.push('webgpu');
+    if (m.gpu && caps.webgpu) eps.push('webgpu');
     eps.push('wasm');
     try {
       return await ort.InferenceSession.create(buf, { executionProviders: eps, graphOptimizationLevel: 'all' });
@@ -619,6 +668,36 @@ function getSession(mode, onProgress){
   sessions[mode] = p;
   p.catch(() => { delete sessions[mode]; });   // a failure must not poison the cache
   return p;
+}
+
+/* --------------------- surviving a tab death ---------------------- *
+ * A renderer killed for memory is not an exception: no try/catch sees
+ * it, the page simply stops existing. So a heavy model is marked before
+ * it loads and unmarked the moment a result lands. A mark still present
+ * on the next visit means the previous attempt was cut off, and the page
+ * can at least say so instead of pretending nothing happened.
+ * Nothing is stored but two words and a byte count — never an image.  */
+const RUN_KEY = 'cutout.running';
+function markRunning(m){
+  try { sessionStorage.setItem(RUN_KEY, JSON.stringify({ label:m.label, bytes:m.bytes })); } catch (e){}
+}
+function clearRunning(){
+  try { sessionStorage.removeItem(RUN_KEY); } catch (e){}
+}
+function cutOffLastTime(){
+  try { return JSON.parse(sessionStorage.getItem(RUN_KEY) || 'null'); } catch (e){ return null; }
+}
+// A normal close or reload fires pagehide; a crash does not.
+addEventListener('pagehide', clearRunning);
+
+function reportCutOff(){
+  const prev = cutOffLastTime();
+  clearRunning();
+  if (!prev) return;
+  setAlert('warn', '<b>The last attempt stopped unexpectedly.</b> ' + prev.label +
+    ' never finished loading and the page was lost, which usually means the ' +
+    fmtBytes(prev.bytes) + ' model did not fit on this device. Nothing was uploaded ' +
+    'and nothing was saved, so those images are gone — add them again and choose Low or Medium.');
 }
 
 /* --------------------------- processing --------------------------- */
@@ -654,6 +733,7 @@ async function processAll(mode){
   $('#chooseLabel').textContent = 'Processing your images…';
   $('#batchClear').disabled = true;
   await capsReady;
+  if (!sessions[mode]) markRunning(MODELS[mode]);
   for (const item of queue){
     if (item.done) continue;
     setStage(item, 'loading', 'Reading image…');
@@ -676,10 +756,10 @@ async function processAll(mode){
           setStage(item, 'working', m.name + ' · ' + Math.round(f * 100) + '% of ' + fmtBytes(m.bytes));
         });
         setProgress(item, null);
-        if (mode === 'pro' && !caps.webgpu){
-          setAlert('warn', '<b>Pro is using CPU mode.</b> GPU acceleration is unavailable ' +
+        if (m.gpu && !caps.webgpu){
+          setAlert('warn', '<b>' + m.label + ' is using CPU mode.</b> GPU acceleration is unavailable ' +
             'in this browser context. Processing may take a minute or more; your device still has a GPU.');
-        } else if (mode === 'pro'){
+        } else {
           setAlert(null);
         }
       }
@@ -694,13 +774,15 @@ async function processAll(mode){
       item.mode = mode;
       item.secs = secs;
       showResult(item);
+      clearRunning();                    // we got a result, so nothing was cut off
     } catch (err){
       console.error(err);
       setStage(item, 'error', 'Could not process this image');
       setMeta(item, '');
       const message = document.createElement('span');
       message.className = 'err';
-      message.textContent = (err && err.message) || 'Failed';
+      // A bare "Failed" helps nobody. Show what actually went wrong.
+      message.textContent = String((err && (err.message || err)) || 'Failed').slice(0, 300);
       item.el.querySelector('.meta').appendChild(message);
       setProgress(item, null);
     }
@@ -1127,42 +1209,87 @@ function addFiles(files){
 }
 
 /* ------------------------------- dialog --------------------------- */
+const ENGINE_BTNS = [['low','optLow'], ['medium','optMedium'], ['high','optHigh']];
+
+// A model weighing more than the GPU's per-allocation limit cannot be loaded
+// at all. This is arithmetic, not a guess about speed, and it is worth
+// honouring: on phones the attempt has been measured taking the whole tab
+// down instead of failing with an error the visitor could recover from.
+function engineFits(m){
+  if (caps.webgpu && caps.maxBinding && m.bytes > caps.maxBinding * 0.85)
+    return { ok:false, why:'needs ' + fmtBytes(m.bytes) + ' of GPU memory, ' +
+      'but this device allows ' + fmtBytes(caps.maxBinding) + ' per allocation' };
+  if (caps.mem > 0 && caps.mem <= 4 && m.bytes > 150 * 1024 * 1024)
+    return { ok:false, why:'this device reports about ' + caps.mem + ' GB of memory, ' +
+      'which is not enough for a ' + fmtBytes(m.bytes) + ' model' };
+  return { ok:true };
+}
+
 function openModal(count){
-  chosen = 'fast';
-  $('#mCount').textContent = count === 1 ? 'This image' : ('These ' + count + ' images');
-  paintOpts();
+  chosen = 'low';
+  $('#mLead').textContent = (count === 1 ? 'This image stays' : 'These ' + count + ' images stay') +
+    ' on this device. Pick the right engine for the job.';
+
+  const blocked = {};
+  ENGINE_BTNS.forEach(([key, id]) => {
+    const fit = engineFits(MODELS[key]);
+    $('#' + id).disabled = !fit.ok;
+    if (!fit.ok) blocked[key] = fit.why;
+  });
+  paintOpts(blocked);
 
   const warn = $('#mWarn');
-  const pro = $('#optPro');
-  pro.disabled = false;                    // never blocked: the visitor decides
+  const names = Object.keys(blocked).map(k => MODELS[k].label);
 
-  if (!caps.webgpu && !caps.good){
+  if (names.length){
     warn.style.display = 'block';
     warn.className = 'warnbox danger';
-    warn.innerHTML = '<b>Fast is recommended in this browser.</b> GPU acceleration is unavailable. ' +
-      'Pro needs a 223 MB download, may take a minute or more per image, and can run out of memory. ' +
-      'You can still try it.';
+    warn.innerHTML = '<b>' + names.join(' and ') + ' would not fit on this device.</b> ' +
+      names.map(n => {
+        const k = Object.keys(blocked).find(x => MODELS[x].label === n);
+        return n + ' ' + blocked[k] + '.';
+      }).join(' ') +
+      ' <b>Low always works here.</b>';
+  } else if (!caps.webgpu && !caps.good){
+    warn.style.display = 'block';
+    warn.className = 'warnbox';
+    warn.innerHTML = '<b>Fast is recommended in this browser.</b> GPU acceleration is unavailable, ' +
+      'so the heavier engines fall back to the processor and take far longer.';
   } else if (!caps.webgpu){
     warn.style.display = 'block';
     warn.className = 'warnbox';
-    warn.innerHTML = '<b>Pro will use the processor, not the GPU.</b> It works, but expect ' +
-      'tens of seconds per image rather than seconds.';
+    warn.innerHTML = '<b>No GPU here, so heavier engines use the processor.</b> ' +
+      'It works, but expect tens of seconds per image rather than seconds.';
   } else {
     warn.style.display = 'none';
   }
 
+  const heavy = MODELS[chosen].bytes > 50 * 1024 * 1024;
   $('#mHint').textContent = count > 4
-    ? (MODELS.pro.label + ' on ' + count + ' images will take a while.')
-    : '';
+    ? (MODELS[chosen].label + ' on ' + count + ' images will take a while.')
+    : (heavy && count > 1 ? 'The model downloads once and is reused for the whole batch.' : '');
   $('#overlay').classList.add('on');
   document.body.classList.add('modal-open');
   document.querySelectorAll('header,main,footer').forEach(el => el.inert = true);
   $('#mGo').focus();
 }
 
-function paintOpts(){
-  $('#optFast').setAttribute('aria-checked', chosen === 'fast' ? 'true' : 'false');
-  $('#optPro').setAttribute('aria-checked', chosen === 'pro' ? 'true' : 'false');
+let lastBlocked = {};
+function paintOpts(blocked){
+  if (blocked !== undefined) lastBlocked = blocked;
+  ENGINE_BTNS.forEach(([key, id]) => {
+    const el = $('#' + id);
+    el.setAttribute('aria-checked', chosen === key ? 'true' : 'false');
+    let why = el.querySelector('.nofit');
+    const reason = lastBlocked[key];
+    if (reason && !why){
+      why = document.createElement('span');
+      why.className = 'nofit';
+      el.querySelector('.cost').after(why);
+    }
+    if (why) why.textContent = reason ? 'Not available here: ' + reason + '.' : '';
+    if (why && !reason) why.remove();
+  });
 }
 
 const closeModal = () => {
@@ -1173,8 +1300,9 @@ const closeModal = () => {
 };
 $('#retryFailed').onclick = () => openModal(queue.filter(i => !i.done).length);
 
-$('#optFast').onclick = () => { chosen = 'fast'; paintOpts(); };
-$('#optPro').onclick = function(){ if (!this.disabled){ chosen = 'pro'; paintOpts(); } };
+$('#optLow').onclick = () => { chosen = 'low'; paintOpts(); };
+$('#optMedium').onclick = function(){ if (!this.disabled){ chosen = 'medium'; paintOpts(); } };
+$('#optHigh').onclick = function(){ if (!this.disabled){ chosen = 'high'; paintOpts(); } };
 $('#mGo').onclick = () => { closeModal(); processAll(chosen); };
 $('#mCancel').onclick = () => {
   closeModal();
@@ -1196,7 +1324,11 @@ document.addEventListener('keydown', e => {
   }
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
     e.preventDefault();
-    chosen = chosen === 'fast' ? 'pro' : 'fast';
+    // Step through the engines this device can actually run.
+    const avail = ENGINE_BTNS.map(([k]) => k).filter(k => !lastBlocked[k]);
+    if (!avail.length) return;
+    const step = e.key === 'ArrowDown' ? 1 : -1;
+    chosen = avail[(avail.indexOf(chosen) + step + avail.length) % avail.length];
     paintOpts();
   }
 });
@@ -1283,8 +1415,9 @@ $('#pasteKey').textContent = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘ V
 
 // Deliberately no model preload: nothing is downloaded until the visitor
 // actually asks for a cut-out. The probe is ~300 bytes and only reports
-// whether the servers are reachable.
-checkServices();
+// whether the servers are reachable. The cut-off check runs after it, so a
+// server outage keeps the louder message.
+checkServices().then(ok => { if (ok) reportCutOff(); });
 
 })();
 </script>
