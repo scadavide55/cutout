@@ -1,6 +1,24 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script>
+/* Pages cannot send the headers that let WebAssembly use several threads, so a tiny
+   service worker adds them. It touches nothing else and only ever runs on this site. */
+if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureContext){
+  navigator.serviceWorker.register('sw.js').then(r => {
+    if (r.active && !navigator.serviceWorker.controller && !sessionStorage.getItem('cutout.coi')){
+      sessionStorage.setItem('cutout.coi', '1'); location.reload();
+    }
+    r.addEventListener('updatefound', () => {
+      const w = r.installing;
+      w && w.addEventListener('statechange', () => {
+        if (w.state === 'activated' && !sessionStorage.getItem('cutout.coi')){ sessionStorage.setItem('cutout.coi', '1'); location.reload(); }
+      });
+    });
+  }).catch(() => {});
+}
+</script>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cutout — remove image backgrounds, free and private</title>
@@ -330,8 +348,8 @@
         <span class="ico">M</span>
         <span>
           <span class="t">Medium <span class="tag">BEST VALUE</span></span>
-          <span class="d">The same model as High, compressed to less than half the size. Nearly identical edges, and it still fits on a phone.</span>
-          <span class="cost"><span>124 MB model</span><span>one-time download</span><span>runs on phones</span></span>
+          <span class="d">The same model as High, compressed to under 60% of the size. Near-identical edges, and it runs on the processor, so it works on phones and any computer, just more slowly.</span>
+          <span class="cost"><span>124 MB model</span><span>CPU · ~20–40 s</span><span>runs on phones</span></span>
         </span>
       </button>
 
@@ -340,7 +358,16 @@
         <span>
           <span class="t">High <span class="tag">SHARPEST</span></span>
           <span class="d">Full precision. The best edges on hair, fur and products, but a 223 MB download that some phones cannot hold in memory at all.</span>
-          <span class="cost"><span>223 MB model</span><span>~3 s on desktop</span><span>desktop preferred</span></span>
+          <span class="cost"><span>223 MB model</span><span>~3–8 s on GPU</span><span>needs WebGPU</span></span>
+        </span>
+      </button>
+
+      <button class="opt" id="optUltra" role="radio" aria-checked="false">
+        <span class="ico">U</span>
+        <span>
+          <span class="t">Ultra <span class="tag">HIGH-END ONLY</span></span>
+          <span class="d">High, run twice on the image and its mirror, then blended. Settles stray edges and uneven hair. Needs a fast computer; you will be asked to confirm.</span>
+          <span class="cost"><span>223 MB model</span><span>~2× High's time</span><span>fast GPU required</span></span>
         </span>
       </button>
     </div>
@@ -353,7 +380,7 @@
       <span class="hint" id="mHint"></span>
       <span class="spacer"></span>
       <button class="btn" id="mCancel">Cancel</button>
-      <button class="btn pri" id="mGo">Cut out</button>
+      <button class="btn pri" id="mGo" data-label="Cut out">Cut out</button>
     </div>
   </div>
 </div>
@@ -399,14 +426,22 @@ const MODELS = {
     url: 'https://huggingface.co/Davide531/ben2-int8/resolve/main/ben2-int8-v2.onnx',
     bytes: 130510516, licence: 'MIT',
     size: 1024, square: true, normalise: 'unit', output: 'minmax',
-    gpu: true
+    gpu: false           // its int8 weights are only computed correctly on the CPU
   },
   high: {
     label: 'High', name: 'BEN2',
     url: 'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base.onnx',
     bytes: 222932053, licence: 'MIT',
     size: 1024, square: true, normalise: 'unit', output: 'minmax',
-    gpu: true
+    gpu: true, gpuOnly: true      // too big for the CPU path: it runs out of memory
+  },
+  ultra: {
+    label: 'Ultra', name: 'BEN2 · two-pass',
+    session: 'high',               // the same weights as High, so one download serves both
+    url: 'https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base.onnx',
+    bytes: 222932053, licence: 'MIT',
+    size: 1024, square: true, normalise: 'unit', output: 'minmax',
+    gpu: true, gpuOnly: true, flipPass: true, highEnd: true
   }
 };
 
@@ -414,7 +449,7 @@ const MAX_FILES = 20;
 const MAX_BYTES = 30 * 1024 * 1024;
 
 // Keep the landing page independent of the AI CDN. Load it on first use only.
-const ORT_BASE = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/';
+const ORT_BASE = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/';
 let runtimePromise;
 function loadRuntime(){
   if (runtimePromise) return runtimePromise;
@@ -478,7 +513,7 @@ async function detectCaps(){
   catch (e){ caps.webgpu = false; caps.maxBinding = 0; }
   caps.good = caps.webgpu || (caps.cores >= 8 && (!caps.mem || caps.mem >= 4));
   const insecure = !window.isSecureContext;
-  $('#capText').textContent = caps.webgpu ? 'GPU available for Pro · runs locally'
+  $('#capText').textContent = caps.webgpu ? 'GPU available for High and Ultra · runs locally'
     : insecure ? 'CPU mode · HTTP connection' : 'CPU mode · runs locally';
   $('#capDot').className = 'd ' + (caps.webgpu ? 'good' : '');
   $('#capText').title = 'Browser support, not a hardware scan. Fast uses the CPU; Pro can use WebGPU.';
@@ -558,6 +593,15 @@ function toTensor(imageData, model){
     }
   }
   return new ort.Tensor('float32', f, [1, 3, height, width]);
+}
+
+function flipTensor(t){
+  const [, c, h, w] = t.dims, src = t.data, dst = new Float32Array(src.length);
+  for (let k = 0; k < c * h; k++){
+    const row = k * w;
+    for (let x = 0; x < w; x++) dst[row + x] = src[row + w - 1 - x];
+  }
+  return new ort.Tensor('float32', dst, t.dims);
 }
 
 function matteFrom(out, model){
@@ -650,10 +694,12 @@ async function fetchWithProgress(url, onProgress){
   return out;
 }
 
+const sessionKey = mode => MODELS[mode].session || mode;
 function getSession(mode, onProgress){
+  const m = MODELS[mode];
+  mode = m.session || mode;
   if (sessions[mode]) return sessions[mode];
 
-  const m = MODELS[mode];
   const p = (async () => {
     await loadRuntime();
     const buf = await fetchWithProgress(m.url, onProgress || (() => {}));
@@ -663,7 +709,7 @@ function getSession(mode, onProgress){
     try {
       return await ort.InferenceSession.create(buf, { executionProviders: eps, graphOptimizationLevel: 'all' });
     } catch (err){
-      if (eps.length > 1){          // WebGPU refused the graph, retry on CPU
+      if (eps.length > 1 && !m.gpuOnly){          // WebGPU refused the graph, retry on CPU
         return await ort.InferenceSession.create(buf, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
       }
       throw err;
@@ -722,6 +768,20 @@ async function runOne(item, mode){
   const mw = dims[dims.length - 1];
 
   let matte = matteFrom(out, m);
+  if (m.flipPass){
+    // Second look at the mirrored picture; the two mattes are averaged, which
+    // settles edges where the model changed its mind between the two views.
+    const f2 = flipTensor(tensor);
+    const r2 = await sess.run({ [sess.inputNames[0]]: f2 });
+    const m2 = matteFrom(r2[sess.outputNames[0]], m);
+    const n = Math.min(matte.length, m2.length);
+    for (let y = 0; y < mh; y++){
+      for (let x = 0; x < mw; x++){
+        const i = y * mw + x;
+        if (i < n) matte[i] = (matte[i] + m2[y * mw + (mw - 1 - x)]) / 2;
+      }
+    }
+  }
   if (matte.length !== mw * mh && matte.length >= mw * mh){
     matte = matte.subarray(matte.length - mw * mh);
   }
@@ -738,7 +798,7 @@ async function processAll(mode){
   $('#chooseLabel').textContent = 'Processing your images…';
   $('#batchClear').disabled = true;
   await capsReady;
-  if (!sessions[mode]) markRunning(MODELS[mode]);
+  if (!sessions[sessionKey(mode)]) markRunning(MODELS[mode]);
   for (const item of queue){
     if (item.done) continue;
     setStage(item, 'loading', 'Reading image…');
@@ -753,7 +813,7 @@ async function processAll(mode){
 
       if (!window.ort) setStage(item, 'working', 'Starting the AI engine…');
       await loadRuntime();
-      if (!sessions[mode]){
+      if (!sessions[sessionKey(mode)]){
         const m = MODELS[mode];
         setStage(item, 'working', 'Downloading the ' + m.name + ' model…');
         await getSession(mode, f => {
@@ -1214,13 +1274,17 @@ function addFiles(files){
 }
 
 /* ------------------------------- dialog --------------------------- */
-const ENGINE_BTNS = [['low','optLow'], ['medium','optMedium'], ['high','optHigh']];
+const ENGINE_BTNS = [['low','optLow'], ['medium','optMedium'], ['high','optHigh'], ['ultra','optUltra']];
 
 // A model weighing more than the GPU's per-allocation limit cannot be loaded
 // at all. This is arithmetic, not a guess about speed, and it is worth
 // honouring: on phones the attempt has been measured taking the whole tab
 // down instead of failing with an error the visitor could recover from.
 function engineFits(m){
+  if (m.gpuOnly && !caps.webgpu)
+    return { ok:false, why:'needs WebGPU, which this browser does not offer' };
+  if (m.highEnd && (caps.cores < 8 || (caps.mem > 0 && caps.mem < 8)))
+    return { ok:false, why:'needs a high-end computer (8+ CPU cores and a strong GPU)' };
   if (caps.webgpu && caps.maxBinding && m.bytes > caps.maxBinding * 0.85)
     return { ok:false, why:'needs ' + fmtBytes(m.bytes) + ' of GPU memory, ' +
       'but this device allows ' + fmtBytes(caps.maxBinding) + ' per allocation' };
@@ -1281,6 +1345,7 @@ function openModal(count){
 
 let lastBlocked = {};
 function paintOpts(blocked){
+  if (ultraOk && chosen !== 'ultra'){ ultraOk = false; $('#mGo').textContent = $('#mGo').dataset.label || 'Cut out'; $('#mWarn').style.display = 'none'; }
   if (blocked !== undefined) lastBlocked = blocked;
   ENGINE_BTNS.forEach(([key, id]) => {
     const el = $('#' + id);
@@ -1308,7 +1373,23 @@ $('#retryFailed').onclick = () => openModal(queue.filter(i => !i.done).length);
 $('#optLow').onclick = () => { chosen = 'low'; paintOpts(); };
 $('#optMedium').onclick = function(){ if (!this.disabled){ chosen = 'medium'; paintOpts(); } };
 $('#optHigh').onclick = function(){ if (!this.disabled){ chosen = 'high'; paintOpts(); } };
-$('#mGo').onclick = () => { closeModal(); processAll(chosen); };
+$('#optUltra').onclick = function(){ if (!this.disabled){ chosen = 'ultra'; paintOpts(); } };
+let ultraOk = false;
+$('#mGo').onclick = () => {
+  if (MODELS[chosen].highEnd && !ultraOk){
+    // Ultra asks twice: it is the one engine that can bog down a modest machine.
+    const warn = $('#mWarn');
+    warn.style.display = 'block'; warn.className = 'warnbox danger';
+    warn.innerHTML = '<b>Ultra needs a high-end device.</b> It runs the 223 MB model twice per image and ' +
+      'wants a fast GPU and plenty of memory. On a modest computer it can be very slow or close the tab. ' +
+      'Press the button again to go ahead, or pick High.';
+    $('#mGo').textContent = 'I understand, use Ultra';
+    ultraOk = true;
+    return;
+  }
+  ultraOk = false; $('#mGo').textContent = $('#mGo').dataset.label || $('#mGo').textContent;
+  closeModal(); processAll(chosen);
+};
 $('#mCancel').onclick = () => {
   closeModal();
   // Cancelling drops everything added by that batch.

@@ -10,7 +10,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 # Only these files are ever served. Everything else in this folder has no
 # business on a web server: the git history, this script, the README.
-SITE = {"index.html", "favicon.ico", "robots.txt"}
+SITE = {"index.html", "sw.js", "favicon.ico", "robots.txt"}
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
