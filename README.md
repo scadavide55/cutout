@@ -2,7 +2,7 @@
 
 **Status: public beta.** Feature-complete and working, but not yet exercised on
 enough real devices — see [Beta status](#beta-status). 
-FAST+ MODEL COMING SOON - STAY TUNED
+MEDIUM AND ULTRA  MODELS COMING SOON - STAY TUNED
 
 Remove image backgrounds in the browser. Free, no account, no upload: the AI
 model runs on the visitor's own device, so photos never leave it.
@@ -140,11 +140,10 @@ The folder picker offers only `/ (root)` and `/docs`. A subfolder such as
 What is verified: portrait cutouts through both engines, output alpha and
 resolution, custom and flat backgrounds, JPG flattening, clipboard output, and
 batch ZIP export.
-
+As of 14 oct. 2026, it was tested on a Samsung Galaxy A25 5GB with 6GB of ram . The fast model works , the pro doesn't . 
 What is not yet verified well enough to call stable:
 
-- Real phone testing. Phone layout is checked at several widths, but PRO
-  runtime and the file picker on an actual handset have not been measured.
+
 - Very large batches with a mix of failures and retries.
 - Safari and Firefox on older hardware.
 
@@ -166,6 +165,9 @@ their own licences, and those licences apply to them, not to this repository:
 
 Both models are permissive and usable commercially. This is one of the reasons
 they were chosen over alternatives with non-commercial terms.
+
+## Privacy
+We do not store your pictures . The processing happens entirely on your device. We only host the website via GitHub pages and the website pulls the model needed from Hugging Face , downloads it onto your device and nothing leaves your device. 
 
 ## Credits
 
