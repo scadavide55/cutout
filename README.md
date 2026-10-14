@@ -1,7 +1,8 @@
 # Cutout
 
 **Status: public beta.** Feature-complete and working, but not yet exercised on
-enough real devices — see [Beta status](#beta-status).
+enough real devices — see [Beta status](#beta-status). 
+FAST+ MODEL COMING SOON - STAY TUNED
 
 Remove image backgrounds in the browser. Free, no account, no upload: the AI
 model runs on the visitor's own device, so photos never leave it.
