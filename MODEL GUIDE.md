@@ -1,55 +1,83 @@
-## **Model guide**
+# Model guide
 
-_This guide helps you pick the right engine for the job. As of 14 Oct 2026, Cutout offers four engines: **Low**, **Medium**, **High** and **Ultra**._
+Cutout has four engines: **Low**, **Medium**, **High** and **Ultra**. All of them run on your
+device and try your **GPU first**. The CPU is used only as a last resort, and only where it is safe.
 
-**Not sure? Start with Low. If the edges are not good enough, run the same image again with High.**
+**Not sure? Start with Low. If the edges are not good enough, change the engine on the result and run
+it again with Medium or High.**
 
 | | Low | Medium | High | Ultra |
 |---|---|---|---|---|
-| Download | 6.6 MB | 130 MB | 223 MB | 223 MB (shared with High) |
-| Runs on | GPU first (CPU only as a last resort) | GPU first, CPU fallback on computers | GPU required | high-end computer GPU |
-| Speed on a MacBook Air M5 | ~1 s | ~5 s | ~5 s | ~10 s |
+| Download | 25.9 MB (GPU), 6.6 MB (CPU) | 130 MB | 223 MB | 223 MB, shared with High |
+| Runs on | GPU, CPU fallback | GPU, computer CPU fallback | GPU only | GPU only |
 | Portraits | great | great | great | great |
-| Hair, fur, animals | weak | very good | very good | best |
-| Objects, products | weak | very good | very good | best |
-| Works on the tested A25 | yes | disabled | disabled | disabled |
+| Hair, fur, animals | weak | very good | very good | very good, slightly cleaner |
+| Objects, products | weak | very good | very good | very good, slightly cleaner |
+| Relative time | fastest | medium | medium | about 2× High |
+| Tested on Galaxy A25 (4 GB) | works, GPU | off | off | off |
 
-_Speeds are for one 600 × 600 photo, measured on one MacBook Air M5, and include loading the model. They will differ on your device, and the first run is slower because the model has to download once._
+*Timings are not given as numbers because they depend heavily on your device, and the first run
+includes the one-time model download. As a rough reference on a MacBook Air M5, a 600 × 600 photo took
+a few seconds including loading.*
 
----
+## Low
 
-**Low**
-An entry-level model. Use it on very limited devices, or when you need the fastest possible speed.
-Pros: Very fast, tiny download, runs on practically anything, strong on portraits and well-focused people.
-Cons: Dated, and built for people. On animals, objects and busy scenes it often picks the wrong thing to keep: in our test on six varied photos, its cutouts overlapped High's by only about 32% on average. It also struggles with fur, trees and cramped framing, and leaves traces of hair and stray edges.
-Uses the MODNet model.
+MODNet. The quickest option, and a good one for portraits and well-focused people.
 
-**Medium**
-A compressed version of the High model, just under 60% of its size.
-Pros: Nearly High-level results. In our test on six varied photos, Medium's cutouts overlapped High's by about **98%** on average; on five of the six the overlap was above 99.5%, and the weakest was 91%. Far better than Low on animals and objects. Uses desktop WebGPU when the buffers fit, or the desktop processor otherwise.
-Cons: A 130 MB download. On a 4 GB Galaxy A25 it froze the tab even on the GPU in testing, so **Medium is off on low-memory phones**. It is the newest engine and has seen less real-world use than Low and High.
-Uses a compressed version of the BEN2 model.
-_Note: it is still in beta. It was rebuilt on 14 Oct 2026 after an earlier version produced broken cutouts on some photos._
+- **Pros:** small download, very fast, works on phones.
+- **Cons:** built for people. On animals, objects and busy scenes it often keeps the wrong thing; in a
+  six-photo test its cutouts agreed with High's by only about 32% on average. Weak on fur and fine hair.
+- **How it runs:** a float version on the GPU (the quantized one cannot run on WebGPU); the 6.6 MB
+  quantized version is the CPU fallback.
 
-**High**
-The full-weights BEN2 model, and Medium's source. Built for laptops, desktops and strong phones with a GPU.
-Pros: Very powerful, with excellent edges on hair, fur and products. The reference that the other engines are measured against.
-Cons: A 223 MB download that needs WebGPU. It is not offered on phones that cannot hold it in memory (on one mid-range phone it crashed the tab outright), and it is not offered at all without WebGPU, because the processor cannot hold it.
-Uses the full BEN2 model.
+## Medium
 
-**Ultra**
-High, run twice: once on your image and once on its mirror image, then the two results are blended.
-Pros: Settles stray edges and uneven hair where the model changed its mind between the two views. The cleanest result Cutout can produce.
-Cons: About twice High's processing time, and the gain over High is **modest, not dramatic**: it is the same model looking twice, not a bigger model. It is only offered on a high-end computer (a compatible WebGPU GPU with enough buffer headroom), and it asks you to confirm before it starts.
-Uses the full BEN2 model, so there is no extra download if you have already used High.
+A compressed (int8) version of BEN2, about 58% of High's size.
 
----
+- **Pros:** close to High. In the same six-photo test its cutouts agreed with High's by about 98% on
+  average (above 99.5% on five of six, 91% on the weakest). Far better than Low on animals and objects.
+- **Cons:** 130 MB download; newer and less battle-tested. It is **off on low-memory phones**: on a
+  4 GB Galaxy A25 it froze the tab even on the GPU.
+- **How it runs:** GPU first; on computers it can fall back to the CPU, which is slow.
 
-**Image-size safety**
-Accepted images keep their original export resolution. To avoid killing the tab, images are limited to 24 MP on desktop, 12 MP on mobile/low-memory devices, and 8192 pixels per side. Batches are limited to 48 MP on desktop or 24 MP on mobile. Low's inference input is bounded to a 1024-pixel longest edge. Capability checks are conservative hints, not a promise that every GPU driver will work.
+## High
 
-**Why not a bigger model?**
-Larger models exist, and BiRefNet is the strongest of the freely usable ones. Its full version currently fails inside the browser's AI runtime, so it is not offered. Other well-known models, such as RMBG-1.4 and RMBG-2.0, require a paid commercial agreement, so Cutout does not use them.
+The full BEN2 model, and the reference for the others.
 
-**What the comparison numbers mean**
-"Overlap" is how much of the area two cutouts agree on: 100% means identical, and 0% means they share nothing. High is the reference. The test used six different photos on one computer, so treat the figures as a guide, not a guarantee.
+- **Pros:** excellent edges on hair, fur and products.
+- **Cons:** 223 MB, and it needs a GPU with enough memory. Without one it is not offered, because the
+  CPU cannot hold it. On one mid-range phone it crashed the tab.
+
+## Ultra
+
+High, run twice: on your image and on its mirror, then the results are averaged.
+
+- **Pros:** smooths stray edges where the model changed its mind between the two views.
+- **Cons:** about twice High's time, and the gain is **modest and not guaranteed**: it is the same model
+  looking twice, not a bigger one. It asks you to confirm before starting.
+- No extra download if you already used High.
+
+## Why an engine may be unavailable
+
+Cutout checks for WebGPU, the GPU's buffer limit and the memory the browser reports, and disables an
+engine with a reason if it would probably not fit. These are cautious guesses, not guarantees, and a
+different driver might behave differently.
+
+## Image-size safety
+
+Exports keep the original resolution. To protect the tab, images are limited to 24 MP on desktop, 12 MP
+on phones or low-memory devices, and 8192 px per side; batches to 48 MP (desktop) or 24 MP (mobile).
+Low's processing input is capped at 1024 px on the longest edge.
+
+## Why not a bigger model?
+
+BiRefNet is a strong, freely licensed model, but its full version failed inside the browser's AI runtime
+(WebGPU shader errors, and out-of-memory on the CPU), so it is not offered. A smaller or re-exported
+variant might work and has not been tried. RMBG-1.4 and RMBG-2.0 are not licensed for free commercial
+use, so Cutout does not use them.
+
+## What the comparison numbers mean
+
+"Agreement" is the overlap between two cutouts: 100% means identical, 0% means nothing in common.
+High is only the reference, **not the ground truth**, so agreement with High does not measure how
+correct a cutout is. The test used six photos on one computer: treat the figures as a rough guide.

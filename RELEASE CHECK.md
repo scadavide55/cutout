@@ -1,5 +1,8 @@
 # Release check — 14 October 2026
 
+> **Update (14 Oct 2026, later):** this report describes commit 85d283a. Afterwards every engine was switched to GPU first, Low got a float GPU model (about 2 s warm on the Galaxy A25), and Medium was turned off on low-memory phones after it froze the A25 tab on the GPU. The desktop suite passed 69/69 on the final build; the phone suite passed with Low on the GPU. Statements below about Medium's CPU path are historical.
+
+
 **Verdict: ready for a public-beta release, not a fully validated stable cross-browser product.**
 No GitHub publication was performed during validation. Keep the Beta label.
 
