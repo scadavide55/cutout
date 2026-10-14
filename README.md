@@ -10,8 +10,8 @@ No build step, no installed dependencies, no server-side anything. The whole
 site is one static HTML file with inline CSS and JavaScript.
 
 ## The point
-
-Most background removers — Remove.bg among them — upload your photo to a
+1. : Remove.bg is getting removed in December , and i wanted to make an alternative that's entirely free and private.
+2. Most background removers — Remove.bg among them — upload your photo to a
 server, process it there, and either charge per image, cap the resolution,
 watermark the result, or keep copies. Cutout does none of it. There is no
 backend to send anything to.
