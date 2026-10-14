@@ -348,8 +348,8 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
         <span class="ico">M</span>
         <span>
           <span class="t">Medium <span class="tag">BEST VALUE</span></span>
-          <span class="d">The same model as High, compressed to under 60% of the size. Near-identical edges, and it runs on the processor, so it works on phones and any computer, just more slowly.</span>
-          <span class="cost"><span>124 MB model</span><span>CPU · ~20–40 s</span><span>runs on phones</span></span>
+          <span class="d">The same model as High, compressed to under 60% of the size. Near-identical edges and nearly as fast on a computer with a GPU. On a phone it uses the processor, so it still works there, just slower.</span>
+          <span class="cost"><span>124 MB model</span><span>~5 s on GPU</span><span>works on phones</span></span>
         </span>
       </button>
 
@@ -423,10 +423,10 @@ const MODELS = {
   },
   medium: {
     label: 'Medium', name: 'BEN2 compact',
-    url: 'https://huggingface.co/Davide531/ben2-int8/resolve/main/ben2-int8-v2.onnx',
-    bytes: 130510516, licence: 'MIT',
+    url: 'https://huggingface.co/Davide531/ben2-int8/resolve/main/ben2-int8-v3.onnx',
+    bytes: 130416302, licence: 'MIT',
     size: 1024, square: true, normalise: 'unit', output: 'minmax',
-    gpu: false           // its int8 weights are only computed correctly on the CPU
+    gpu: true, gpuMinCores: 8   // GPU on capable machines; phones and weak devices stay on the CPU
   },
   high: {
     label: 'High', name: 'BEN2',
@@ -704,7 +704,7 @@ function getSession(mode, onProgress){
     await loadRuntime();
     const buf = await fetchWithProgress(m.url, onProgress || (() => {}));
     const eps = [];
-    if (m.gpu && caps.webgpu) eps.push('webgpu');
+    if (m.gpu && caps.webgpu && caps.cores >= (m.gpuMinCores || 0)) eps.push('webgpu');
     eps.push('wasm');
     try {
       return await ort.InferenceSession.create(buf, { executionProviders: eps, graphOptimizationLevel: 'all' });
