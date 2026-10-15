@@ -32,7 +32,7 @@ memory.
 - Download progress, clear errors, light and dark theme, keyboard and touch friendly,
   phone-sized layout
 
-## Engines at a glance
+## Engines at a glance ( Read Model Guide.md for further information)
 
 | | Low | Medium | High | Ultra |
 |---|---|---|---|---|
