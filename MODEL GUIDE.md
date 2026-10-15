@@ -35,14 +35,14 @@ MODNet. The quickest option, and a good one for portraits and well-focused peopl
 
 ## Medium
 
-A compressed (int8) version of BEN2, about 58% of High's size.
+A compressed (int8) version of BEN2, about 58% of High's size while retaining ~91% of the quality ( tested on custom benchmark . Retains ~98% of quality on simple scenarios and ~83% on very difficult scenarios )  .
 
-- **Pros:** close to High. In the same six-photo test its cutouts agreed with High's by about 98% on
-  average (above 99.5% on five of six, 91% on the weakest). Far better than Low on animals and objects.
+- **Pros:** close to High. In the same six-photo test its cutouts agreed with High's by about 91% on
+  average (above 99.5% on five of six, 83,91% on the weakest). Far better than Low on animals and objects.
 - **Cons:** 130 MB download; newer and less battle-tested. It is **off on low-memory phones**: on a
   4 GB Galaxy A25 it froze the tab even on the GPU.
 - **How it runs:** GPU first; on computers it can fall back to the CPU, which is slow.
-
+It does run on a 8GB ram phone like a Samsung Galaxy A37 5G , ran in  ~21 seconds.  Doesn't work on less than 6GB of ram. 
 ## High
 
 The full BEN2 model, and the reference for the others.
@@ -50,6 +50,8 @@ The full BEN2 model, and the reference for the others.
 - **Pros:** excellent edges on hair, fur and products.
 - **Cons:** 223 MB, and it needs a GPU with enough memory. Without one it is not offered, because the
   CPU cannot hold it. On one mid-range phone it crashed the tab.
+  Doesn't work under 8GB of ram . Tested on Samsung Galaxy A37 with 8GB of ram. It ran  in ~30 seconds.
+  
 
 ## Ultra
 
@@ -59,6 +61,7 @@ High, run twice: on your image and on its mirror, then the results are averaged.
 - **Cons:** about twice High's time, and the gain is **modest and not guaranteed**: it is the same model
   looking twice, not a bigger one. It asks you to confirm before starting.
 - No extra download if you already used High.
+- Doesn't work on less than 12GB of ram . Crashed on the A37 . 
 
 ## Why an engine may be unavailable
 
