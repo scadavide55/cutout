@@ -1,5 +1,6 @@
 # Privacy policy
 
+_Last updated on 20th October , 2026_
 **Applies to:** Cutout, the browser background remover at <https://scadavide55.github.io/cutout/>,
 to local copies of it (`server.py`, `server_lan.py`), and to the source repository
 <https://github.com/scadavide55/cutout>.
