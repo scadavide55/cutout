@@ -3,10 +3,10 @@
 <head>
 
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Cutout — remove image backgrounds, free and private</title>
 <meta name="description" content="Remove image backgrounds in your browser. No account, no upload, no cost.">
-<meta name="theme-color" content="#111312">
+<meta name="theme-color" content="#0d0e14">
 <link rel="canonical" href="https://scadavide55.github.io/cutout/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Cutout">
@@ -37,32 +37,34 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
   }).catch(() => {});
 }
 </script>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='3' width='12' height='12' rx='3.5' fill='%235aa2ff'/><rect x='9' y='9' width='12' height='12' rx='3.5' fill='none' stroke='%235aa2ff' stroke-width='1.8'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='3' width='12' height='12' rx='3.5' fill='%239a87ff'/><rect x='9' y='9' width='12' height='12' rx='3.5' fill='none' stroke='%239a87ff' stroke-width='1.8'/></svg>">
 <style>
   /* System fonts, inline icons, no filters or decorative animation. */
   :root{
     color-scheme:dark light;
-    --bg:#111312; --panel:#191c1a; --panel-2:#212522; --panel-3:#2b302c;
-    --line:#303631; --line-2:#4d574f; --text:#f0f3ed; --dim:#b2bcb3; --dim-2:#97a298;
-    --accent:#c5f277; --accent-hi:#d5ff91; --accent-ink:#1b2811;
-    --good:#a4dc75; --warn:#edc779; --bad:#ff9b9b; --r:20px;
-    --chk-a:#2b322b; --chk-b:#252b25; --swchk-a:#677268; --swchk-b:#414a42;
-    --sel-bg:#26331f; --over-bg:#24301e;
-    --done-bg:#23331f; --done-line:#415d36; --warn-bg:#30291b; --warn-line:#665335;
-    --danger-bg:#342021; --danger-line:#684041; --scrim:rgba(0,0,0,.72);
-    --shadow:0 20px 70px rgba(0,0,0,.28);
+    --bg:#0d0e14; --panel:#151722; --panel-2:#1b1e2c; --panel-3:#262b3f;
+    --line:#2a2f45; --line-2:#474f70; --text:#eef0f9; --dim:#b0b6cd; --dim-2:#8f96b2;
+    --accent:#9a87ff; --accent-hi:#b0a1ff; --accent-ink:#0f0a2b;
+    --good:#7ee3c4; --warn:#f2c97d; --bad:#ff9fae; --r:20px;
+    --brand:#b3a5ff; --brand-2:#ff9ec7;
+    --chk-a:#252a3c; --chk-b:#1e2232; --swchk-a:#69708f; --swchk-b:#434a66;
+    --sel-bg:#211f3d; --over-bg:#1d1b38;
+    --done-bg:#12302b; --done-line:#2a6556; --warn-bg:#30281a; --warn-line:#675331;
+    --danger-bg:#35202a; --danger-line:#6a3b4b; --scrim:rgba(6,6,14,.74);
+    --shadow:0 20px 70px rgba(0,0,0,.35); --glow:rgba(154,135,255,.16);
   }
   @media(prefers-color-scheme:light){
     :root{
-      --bg:#f5f6f0; --panel:#fff; --panel-2:#f1f3ec; --panel-3:#e5e9df;
-      --line:#dbe1d4; --line-2:#aebaa4; --text:#202a20; --dim:#566350; --dim-2:#66745f;
-      --accent:#c1ec70; --accent-hi:#b0df5d; --accent-ink:#233414;
-      --good:#3d6d2e; --warn:#79521b; --bad:#ac343c;
-      --chk-a:#e1e7da; --chk-b:#f1f4ec; --swchk-a:#c7d1be; --swchk-b:#f2f5ed;
-      --sel-bg:#f0f7e3; --over-bg:#edf6df;
-      --done-bg:#edf6e4; --done-line:#c7ddba; --warn-bg:#faf3e4; --warn-line:#e5cf9e;
-      --danger-bg:#fff0ee; --danger-line:#ebc5c2; --scrim:rgba(21,30,18,.48);
-      --shadow:0 20px 70px rgba(30,45,20,.12);
+      --bg:#f6f5fc; --panel:#fff; --panel-2:#f2f0fb; --panel-3:#e6e2f6;
+      --line:#e0dcf0; --line-2:#b4aed3; --text:#1c1936; --dim:#525071; --dim-2:#645f86;
+      --accent:#6a4df0; --accent-hi:#5a3cdc; --accent-ink:#ffffff;
+      --good:#0b7a63; --warn:#7d5314; --bad:#b0304a;
+      --brand:#5b3fe0; --brand-2:#d6336c;
+      --chk-a:#e6e3f4; --chk-b:#f4f2fb; --swchk-a:#cbc7e2; --swchk-b:#f4f2fb;
+      --sel-bg:#efebff; --over-bg:#ece7ff;
+      --done-bg:#e3f6f0; --done-line:#aedccd; --warn-bg:#fbf3e3; --warn-line:#e6cf9c;
+      --danger-bg:#fff0f3; --danger-line:#f0c4cd; --scrim:rgba(20,16,50,.5);
+      --shadow:0 20px 70px rgba(60,40,140,.14); --glow:rgba(106,77,240,.12);
     }
   }
   *{box-sizing:border-box;margin:0;padding:0}
@@ -146,8 +148,8 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
   .stage.ready .orig{opacity:0}
   .stage.compare .orig{opacity:1;z-index:2}
   .stage .placeholder{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:11px;
-    padding:24px;text-align:center;background:var(--scrim);color:#f4f7ee;font-size:13px}
-  .stage .spinner{width:23px;height:23px;border:2px solid #667258;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+    padding:24px;text-align:center;background:var(--scrim);color:#f4f3ff;font-size:13px}
+  .stage .spinner{width:23px;height:23px;border:2px solid #5d5a80;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
   .stage-tools{position:absolute;top:12px;right:12px;display:flex;gap:6px;z-index:3}
   .card-body{padding:19px;display:flex;flex-direction:column;gap:12px;flex:1}
@@ -271,10 +273,145 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
     .acts .btn{min-height:44px}
     .acts .refine{min-height:40px}
   }
+
+  /* ---- UX polish v2: violet palette, clearer states, calmer motion ---- */
+  :focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:6px}
+  body{background:radial-gradient(900px 480px at 50% -80px,var(--glow),transparent 70%) no-repeat,var(--bg)}
+  .skip{position:absolute;left:12px;top:-60px;z-index:100;background:var(--accent);color:var(--accent-ink);padding:10px 16px;border-radius:10px;font-weight:650;text-decoration:none;transition:top .15s}
+  .skip:focus{top:12px}
+  .mark{color:var(--brand)}
+  .brand .version{background:var(--panel-3);color:var(--brand);border:1px solid var(--line-2)}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:6px 12px}
+  .header-link{padding:6px 2px;border-bottom:1px solid transparent}
+  .header-link:hover{border-color:var(--brand)}
+  .hero h1 span{background:linear-gradient(95deg,var(--brand),var(--brand-2));-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+  .hero .eyebrow::before{background:var(--brand-2)}
+  .studio{border-radius:28px;padding:12px}
+  #drop{border-width:2px;border-style:dashed;border-radius:20px;padding:44px 20px 34px;transition:border-color .2s,background .2s,box-shadow .2s}
+  #drop:hover,#drop:focus-visible,#drop.over{border-color:var(--brand);background:var(--over-bg)}
+  #drop.over{box-shadow:inset 0 0 0 4px var(--glow)}
+  #drop.over .dz-title{color:var(--brand)}
+  .art-photo,.art-cutout{transition:transform .25s ease}
+  #drop:hover .art-photo,#drop.over .art-photo{transform:rotate(-14deg) translateX(-5px)}
+  #drop:hover .art-cutout,#drop.over .art-cutout{transform:rotate(12deg) translateX(5px)}
+  .art-cutout{color:var(--brand)}
+  #drop .dz-title{font-size:22px}
+  .choose{background:linear-gradient(95deg,var(--accent),var(--accent-hi));padding:14px 28px;min-height:50px;border-radius:12px;font-size:15px;box-shadow:0 6px 20px var(--glow)}
+  #drop:hover .choose{transform:translateY(-1px);box-shadow:0 10px 26px var(--glow)}
+  #drop:active .choose{transform:none}
+  .studio-foot{padding:14px 12px 4px}
+  .studio-foot>span:first-child{color:var(--good)}
+  .dot,.device-status .d.good{background:var(--good)}
+  .how article{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 16px 16px 16px}
+  .how .step-no{position:static;display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--panel-3);color:var(--brand);margin-bottom:10px;font-weight:650;line-height:1}
+  .how h2{font-size:14px}.how p{font-size:12.5px}
+  .card{transition:border-color .2s,box-shadow .2s,transform .2s}
+  .card:hover{border-color:var(--line-2);box-shadow:var(--shadow);transform:translateY(-2px)}
+  .stage .placeholder{backdrop-filter:none;font-weight:550}
+  .progress{height:4px}
+  .progress i{background:linear-gradient(90deg,var(--accent),var(--brand-2))}
+  .pill.fast,.pill.pro,.pill.medium,.pill.high,.pill.ultra{color:var(--brand);background:var(--sel-bg);border-color:var(--line-2)}
+  .sw{transition:transform .15s}.sw:hover{transform:scale(1.1)}
+  .sw.sel{box-shadow:0 0 0 2px var(--panel),0 0 0 4px var(--brand)}
+  button.btn{border-radius:11px;transition:background .15s,border-color .15s,transform .1s}
+  button.btn:active:not(:disabled){transform:scale(.97)}
+  button.btn.pri{background:linear-gradient(95deg,var(--accent),var(--accent-hi));border-color:transparent}
+  button.btn.pri:hover:not(:disabled){background:var(--accent-hi);border-color:transparent}
+  button.btn.done{background:var(--done-bg);border-color:var(--done-line);color:var(--good)}
+  button.mini{background:var(--scrim);color:#fff;border-color:rgba(255,255,255,.28)}
+  button.mini:hover{background:var(--accent);color:var(--accent-ink)}
+  #batch{border-color:var(--line-2);border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.28)}
+  .opt{border-width:1.5px;border-radius:16px;transition:border-color .15s,background .15s,transform .1s}
+  .opt:hover:not(:disabled){border-color:var(--brand);background:var(--panel-3)}
+  .opt:active:not(:disabled){transform:scale(.99)}
+  .opt[aria-checked="true"]{border-color:var(--brand);background:var(--sel-bg);box-shadow:0 0 0 3px var(--glow)}
+  .opt[aria-checked="true"] .ico{background:var(--accent)}
+  .opt[aria-checked="true"]::after{color:var(--brand)}
+  .opt .tag.rec{background:var(--done-bg);color:var(--good)}
+  .modal{border-radius:26px}
+  .alert .btn{border-radius:9px}
+  footer{max-width:1108px;padding:24px 0 30px;line-height:1.7}
+  footer a:hover{color:var(--text)}
+  @media(max-width:650px){
+    #drop{padding:34px 15px 26px}
+    .how{grid-template-columns:1fr}
+    .how article{display:grid;grid-template-columns:34px 1fr;column-gap:10px;padding:14px}
+    .how .step-no{grid-row:span 2;margin:0}
+    .card:hover{transform:none}
+  }
+  @media(hover:none){.card:hover,.sw:hover{transform:none}}
+
+  /* ---- Phone and touch polish ---- */
+  html{-webkit-text-size-adjust:100%}
+  button,.opt,#drop,.sw{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  .card{animation:rise .35s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}}
+  #drop:active{background:var(--over-bg);border-color:var(--brand)}
+  @media(pointer:coarse){
+    .dz-hint{display:none}
+    #drop .dz-title{margin-bottom:4px}
+    button.mini{width:44px;height:44px}
+    .stage-tools{top:10px;right:10px;gap:8px}
+    button.btn{min-height:44px}
+    .header-link{padding:12px 4px}
+  }
+  @media(max-width:650px){
+    header{padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left))}
+    .mark{width:30px;height:30px} .brand b{font-size:20px}
+    .chip{font-size:11px;padding:5px 10px;margin-left:auto}
+    main{padding:18px max(16px,env(safe-area-inset-right)) 32px max(16px,env(safe-area-inset-left))}
+    .hero{margin-bottom:20px}
+    .hero h1{font-size:clamp(30px,9.2vw,38px);letter-spacing:-.045em;line-height:1.08}
+    .hero p{font-size:14.5px;margin-top:14px;line-height:1.6}
+    .hero .eyebrow{font-size:10px;padding:6px 11px;margin-bottom:14px}
+    .studio{padding:8px;border-radius:24px}
+    #drop{padding:26px 14px 20px;border-radius:18px}
+    .dz-art{transform:scale(.85);margin-bottom:12px}
+    #drop .dz-title{font-size:20px}
+    .choose{width:100%;margin:16px 0 4px;min-height:54px;font-size:16px}
+    #drop .dz-note{margin-top:12px;font-size:11px}
+    body.has-images .hero h1{font-size:26px}
+    body.has-images #drop{padding:12px}
+    body.has-images .choose{margin:0;min-height:48px}
+    .studio-foot{flex-direction:column;align-items:center;gap:4px;padding:12px 6px 4px;text-align:center}
+    .how article{border-radius:14px}
+    .workspace-head{flex-wrap:wrap}
+    .workspace-head h2{font-size:19px}
+    #queue{gap:14px}
+    .card-body{padding:14px;gap:10px}
+    .name{font-size:15px}
+    .meta{font-size:12px}
+    .bgs{gap:8px;padding-top:12px}
+    .acts{gap:8px}
+    .acts .btn.wide{flex:1 1 calc(50% - 4px)}
+    #batch{position:sticky;bottom:max(10px,env(safe-area-inset-bottom));padding:10px;border-radius:16px;gap:8px;background:var(--panel)}
+    #batch .txt{width:100%;font-size:12px}
+    #batch button{flex:1;min-height:48px}
+    #overlay{align-items:flex-end;padding:0}
+    .modal{max-width:none;border-radius:24px 24px 0 0;border-bottom:0;padding:20px 16px max(16px,env(safe-area-inset-bottom));max-height:92dvh;animation:sheet .28s ease both}
+    .modal::before{content:'';display:block;width:40px;height:4px;border-radius:2px;background:var(--line-2);margin:-8px auto 14px}
+    @keyframes sheet{from{transform:translateY(40px);opacity:0}}
+    .modal h2{font-size:22px}
+    .modal .lead{font-size:13px}
+    .opt{padding:14px;min-height:64px}
+    .opt .d{font-size:12px}
+    .modal .foot{bottom:-16px;padding:12px 0 4px;gap:8px;border-top:1px solid var(--line)}
+    .modal .foot .btn{flex:1;min-height:48px}
+    footer{text-align:center;padding:20px 0 max(24px,env(safe-area-inset-bottom));font-size:11.5px}
+  }
+  @media(max-width:360px){
+    .chip{display:none}
+    .hero h1{font-size:28px}
+  }
+  @media(max-height:480px) and (orientation:landscape){
+    .modal{max-height:96dvh}
+    .hero{margin-bottom:14px} .dz-art{display:none}
+  }
   @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
+<a class="skip" href="#drop">Skip to upload</a>
 
 <header>
   <a class="brand" href="#" aria-label="Cutout home">
@@ -302,9 +439,9 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
   </div>
 
   <section class="hero" aria-labelledby="headline">
-    <div class="eyebrow">Less background. More possibility.</div>
-    <h1 id="headline">Keep the subject.<br><span>Lose the background.</span></h1>
-    <p>A clean cutout, without the extra steps.<br>Free, full resolution, and entirely on your device.</p>
+    <div class="eyebrow">Free background remover</div>
+    <h1 id="headline">Remove image backgrounds.<br><span>Right in your browser.</span></h1>
+    <p>No account, no upload, no watermark.<br>Your photos never leave your device.</p>
   </section>
 
   <div class="studio">
@@ -319,13 +456,13 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
           <svg viewBox="0 0 32 36" fill="currentColor"><circle cx="16" cy="10" r="7"/><path d="M3 33c0-10 5-15 13-15s13 5 13 15z"/></svg>
         </div>
       </div>
-      <div class="dz-title">Make room for what matters.</div>
-      <div class="dz-sub">One photo or a whole batch. You choose.</div>
+      <div class="dz-title">Drop your photos here</div>
+      <div class="dz-sub">One image or up to 20 at a time.</div>
       <span class="choose">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4m-4 4 4-4 4 4M4 16v4h16v-4"/></svg>
         <span id="chooseLabel">Choose images</span>
       </span>
-      <div class="dz-sub">or drop here · paste with <kbd id="pasteKey">⌘ V</kbd></div>
+      <div class="dz-sub dz-hint">or drop here · paste with <kbd id="pasteKey">⌘ V</kbd></div>
       <div class="dz-note">JPG, PNG, WebP &amp; more · up to 20 images · 30 MB each</div>
     </div>
     <input id="file" type="file" accept="image/*" multiple hidden>
@@ -340,14 +477,14 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
   <p id="capHint" hidden></p>
 
   <section class="how" id="how" aria-label="How it works">
-    <article><span class="step-no">01</span><h2>Start with an image</h2><p>A portrait, a product, or your next good idea.</p></article>
-    <article><span class="step-no">02</span><h2>Choose your cutout</h2><p>Low for portraits. High and Ultra for the tricky details.</p></article>
-    <article><span class="step-no">03</span><h2>Make it yours</h2><p>Keep it transparent or give it a new background.</p></article>
+    <article><span class="step-no">01</span><h2>Add your images</h2><p>Drop, choose or paste them. Up to 20 at once.</p></article>
+    <article><span class="step-no">02</span><h2>Pick an engine</h2><p>Low is fastest. High and Ultra handle hair and fine edges.</p></article>
+    <article><span class="step-no">03</span><h2>Download</h2><p>Save a transparent PNG, or add a new background first.</p></article>
   </section>
 
   <section class="workspace" id="workspace" hidden aria-labelledby="resultsTitle">
     <div class="workspace-head">
-      <div><h2 id="resultsTitle">Your images</h2><p>Original resolution. Ready for whatever is next.</p></div>
+      <div><h2 id="resultsTitle">Your images</h2><p>Exported at the original resolution.</p></div>
       <span class="spacer"></span>
       <button class="btn" id="retryFailed" hidden>Retry failed</button>
     </div>
@@ -375,9 +512,9 @@ if ('serviceWorker' in navigator && !crossOriginIsolated && window.isSecureConte
 
 <div id="overlay" role="dialog" aria-modal="true" aria-labelledby="mTitle">
   <div class="modal">
-    <div class="eyebrow">Your image. Your choice.</div>
+    <div class="eyebrow">Engine</div>
     <h2 id="mTitle">Choose your cutout</h2>
-    <div class="lead" id="mLead">Your images stay on this device. Pick the right engine for the job.</div>
+    <div class="lead" id="mLead">Everything runs on this device. Bigger engines give cleaner edges but download more.</div>
 
     <div class="opts" role="radiogroup" aria-label="Cutout engine">
       <button class="opt" id="optLow" role="radio" aria-checked="true">
@@ -1161,7 +1298,7 @@ function buildCard(file){
   cst.className = 'sw'; cst.dataset.c = 'custom'; cst.title = 'Pick any colour';
   // A rainbow disc reads as "any colour" — an empty box just looks broken.
   cst.style.background = 'conic-gradient(from 210deg, #ff5f6d, #ffc371, #f7ff71, #4ade80, #38bdf8, #818cf8, #e879f9, #ff5f6d)';
-  cst.innerHTML = '<input type="color" value="#5aa2ff">';
+  cst.innerHTML = '<input type="color" value="#9a87ff">';
   cst.querySelector('input').oninput = e => {
     cst.style.background = e.target.value;
     setBg({ type:'colour', css:e.target.value }, 'custom');
