@@ -52,5 +52,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           for f in dist/*.dmg dist/*.zip dist/*.exe dist/*.tar.gz; do
-            [ -f "$f" ] && gh release upload "${{ inputs.tag }}" "$f" --clobber
+            if [ -f "$f" ]; then gh release upload "${{ inputs.tag }}" "$f" --clobber; fi
           done
