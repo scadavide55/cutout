@@ -1,0 +1,10 @@
+{
+  "models": {
+    "https://huggingface.co/Xenova/modnet/resolve/main/onnx/model_quantized.onnx": "models/modnet-quantized.onnx",
+    "https://huggingface.co/Xenova/modnet/resolve/main/onnx/model.onnx": "models/modnet.onnx",
+    "https://huggingface.co/Davide531/ben2-int8/resolve/main/ben2-int8-v3.onnx": "models/ben2-int8-v3.onnx",
+    "https://huggingface.co/PramaLLC/BEN2/resolve/main/BEN2_Base.onnx": "models/BEN2_Base.onnx"
+  },
+  "ortBase": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/",
+  "ping": "https://huggingface.co/Xenova/modnet/resolve/main/preprocessor_config.json"
+}

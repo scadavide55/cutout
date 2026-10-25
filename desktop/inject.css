@@ -1,0 +1,28 @@
+/* Desktop-only layer: makes the page behave like an app, not a website. */
+html.desktop{overscroll-behavior:none;scroll-behavior:auto}
+html.desktop body{user-select:none;-webkit-user-select:none;cursor:default}
+html.desktop input,html.desktop kbd{user-select:text}
+html.desktop .name,html.desktop .meta{user-select:text;cursor:text}
+html.desktop a{cursor:pointer}
+html.desktop img{-webkit-user-drag:none}
+html.desktop ::-webkit-scrollbar{width:12px;height:12px}
+html.desktop ::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:8px;border:3px solid var(--bg)}
+html.desktop ::-webkit-scrollbar-track{background:transparent}
+/* Title bar: header doubles as the drag handle. */
+html.desktop header{-webkit-app-region:drag;padding-top:18px;padding-bottom:14px;border-bottom:1px solid var(--line);
+  max-width:none;margin:0;padding-left:28px;padding-right:28px;background:var(--bg);position:sticky;top:0;z-index:20}
+html.desktop header a,html.desktop header button{-webkit-app-region:no-drag}
+html.desktop.mac header{padding-left:92px}
+html.desktop.win header{padding-right:150px}
+html.desktop .header-link,html.desktop #how,html.desktop .how,html.desktop .hero .eyebrow,html.desktop .opt .cost{display:none!important}
+html.desktop main{padding-top:30px}
+html.desktop .hero{margin-bottom:26px}
+html.desktop .hero h1{font-size:clamp(30px,4.4vw,48px)}
+html.desktop .hero p{margin-top:12px}
+html.desktop footer{max-width:none;padding:12px 28px;border-top:1px solid var(--line);font-size:11px;align-items:center}
+html.desktop .studio{box-shadow:none}
+@media(max-width:650px){
+  html.desktop header{padding-left:16px;padding-right:16px}
+  html.desktop.mac header{padding-left:80px}
+  html.desktop footer{padding:12px 16px}
+}

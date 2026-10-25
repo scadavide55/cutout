@@ -1,0 +1,56 @@
+name: Desktop apps
+
+# Builds the Electron app (models bundled) for macOS, Windows and Linux.
+# Run it by hand and give the release tag to attach the files to, e.g. v2.5.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to attach the apps to (leave empty to only build)
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            args: --mac --arm64 --x64
+          - os: windows-latest
+            args: --win --x64
+          - os: ubuntu-latest
+            args: --linux --x64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run prepare-assets
+      - run: npx electron-builder ${{ matrix.args }} --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cutout-${{ matrix.os }}
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/*.zip
+            desktop/dist/*.exe
+            desktop/dist/*.tar.gz
+          if-no-files-found: error
+      - name: Attach to release
+        if: ${{ inputs.tag != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for f in dist/*.dmg dist/*.zip dist/*.exe dist/*.tar.gz; do
+            [ -f "$f" ] && gh release upload "${{ inputs.tag }}" "$f" --clobber
+          done

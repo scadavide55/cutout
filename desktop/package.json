@@ -1,0 +1,38 @@
+{
+  "name": "cutout-desktop",
+  "productName": "Cutout",
+  "version": "2.5.0",
+  "description": "Cutout: remove image backgrounds offline. All AI models are bundled.",
+  "author": "scadavide55",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/scadavide55/cutout",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "prepare-assets": "node scripts/prepare.js",
+    "start": "npm run prepare-assets && electron .",
+    "dist": "npm run prepare-assets && electron-builder",
+    "dist:mac": "npm run prepare-assets && electron-builder --mac",
+    "dist:win": "npm run prepare-assets && electron-builder --win",
+    "dist:linux": "npm run prepare-assets && electron-builder --linux"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.0",
+    "onnxruntime-web": "1.24.3"
+  },
+  "build": {
+    "appId": "io.github.scadavide55.cutout",
+    "productName": "Cutout",
+    "artifactName": "Cutout-${version}-${os}-${arch}.${ext}",
+    "directories": { "output": "dist" },
+    "files": ["main.js", "build/icon.png", "inject.css", "inject.js", "assets.json", "app/**/*", "package.json"],
+    "extraResources": [{ "from": "assets", "to": "assets" }],
+    "compression": "normal",
+    "mac": { "target": ["dmg", "zip"], "category": "public.app-category.graphics-design", "identity": null },
+    "win": { "target": ["nsis", "zip"] },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true },
+    "linux": { "target": ["tar.gz"], "category": "Graphics" }
+  }
+}
