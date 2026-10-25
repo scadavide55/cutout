@@ -30,7 +30,7 @@
     "files": ["main.js", "build/icon.png", "inject.css", "inject.js", "assets.json", "app/**/*", "package.json"],
     "extraResources": [{ "from": "assets", "to": "assets" }],
     "compression": "normal",
-    "mac": { "target": ["dmg", "zip"], "category": "public.app-category.graphics-design", "identity": null },
+    "mac": { "target": ["dmg", "zip"], "category": "public.app-category.graphics-design", "identity": "-", "hardenedRuntime": false },
     "win": { "target": ["nsis", "zip"] },
     "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true },
     "linux": { "target": ["tar.gz"], "category": "Graphics" }
