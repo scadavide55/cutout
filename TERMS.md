@@ -1,9 +1,10 @@
 # Terms and conditions
 
 **Applies to:** Cutout, the browser background remover at <https://scadavide55.github.io/cutout/>,
-and to any local copy of the same code.
+to any local copy of the same code, and to the Cutout plugin in the Tacet browser
+(<https://scadavide55.github.io/Tacet>).
 
-**Version:** public beta · **Last updated:** 15 October 2026
+**Version:** public beta · **Last updated:** 7 November 2026
 
 ## The short version
 
@@ -15,6 +16,8 @@ and to any local copy of the same code.
 - It runs **entirely in your browser**. There is no server, no storage and no service-level promise.
 - **Use it lawfully**: not to break the law, not to abuse the hosts that serve the models, not to
   mislead people with the images you make.
+- The **Tacet plugin** is the same tool bundled inside the Tacet browser. It works offline, and these
+  terms apply to it in the same way.
 - The code is **Apache-2.0**; the models keep their own permissive licences.
 - **EU consumer law applies** and nothing here takes away rights you have by law. Questions go to the
   repository's issue tracker.
@@ -25,6 +28,12 @@ Cutout is a free, static web tool that removes the background from images. It is
 an independent developer (GitHub: [scadavide55](https://github.com/scadavide55)). It is not a company,
 it takes no payments, it sells nothing, and it offers no support contract. There is no account, no
 sign-in, no subscription and no uploaded copy of your files.
+
+Cutout is also available as a plugin in Tacet, a web browser made by the same developer
+(<https://scadavide55.github.io/Tacet>). The plugin runs the same code and the same engines as the web
+version, but it works completely offline and makes no network requests: the models and the inference
+runtime are bundled with it (about 450 MB). In these terms, "Cutout" means both the hosted site and the
+plugin, except where a section says otherwise.
 
 It is published as open source so that its claims can be checked: the whole app is one `index.html`
 and one small `sw.js`. See <https://github.com/scadavide55/cutout>.
@@ -70,7 +79,11 @@ memory or too little RAM. These are cautious guesses about your device, not guar
 still happen on a configuration that was expected to work. See the
 [model guide](https://github.com/scadavide55/cutout/blob/main/MODEL%20GUIDE.md) for detail.
 
-**Availability.** Cutout needs its model hosts (Hugging Face, jsDelivr) and its own host (GitHub Pages)
+**In the Tacet plugin** all four engines are bundled, so nothing is downloaded and the limits above are
+the only ones that apply. The device requirements still apply, and the same caution about unexpected
+failures holds.
+
+**Availability.** The hosted site needs its model hosts (Hugging Face, jsDelivr) and its own host (GitHub Pages)
 to be reachable. Any of them can be down, rate-limited or changed, and the app can simply stop working
 for a while. No uptime, no availability and no continuity is promised. The developer may change, move or
 withdraw the site at any time, without notice.
@@ -87,7 +100,7 @@ You agree **not** to:
 - misrepresent Cutout as your own product, or imply that its authors endorse you or your use of it;
 - remove or falsify licence, attribution or copyright notices from the code or the model files.
 
-The site is static, so there is no account to suspend. Where a host, a rightsholder or a platform reports
+The site and the plugin are static, so there is no account to suspend. Where a host, a rightsholder or a platform reports
 abuse, the developer may withdraw the hosted copy or stop distributing the code at its own discretion.
 
 ## 7. Licences: your use of the site, and the code underneath
@@ -96,7 +109,7 @@ Using the hosted site is governed by these terms. The **source code** is license
 **Apache License 2.0** (see `LICENSE`): if you copy, modify or redistribute the code, that licence — not
 these terms — applies to the code, and it requires you to keep the notices intact.
 
-The models and libraries downloaded at runtime are **not** covered by these terms and remain under their
+The models and libraries downloaded at runtime (or, in the Tacet plugin, bundled with it) are **not** covered by these terms and remain under their
 own licences, granted by their authors:
 
 | Component | Licence |
@@ -110,7 +123,8 @@ models that forbid free commercial use, which is why RMBG-1.4 and RMBG-2.0 are n
 
 ## 8. Third-party services
 
-The page loads code and models from GitHub Pages, jsDelivr and Hugging Face. Those services are provided
+The hosted page loads code and models from GitHub Pages, jsDelivr and Hugging Face. The Tacet plugin
+loads nothing from them. Those services are provided
 by others under their own terms, and the developer does not control them and is not responsible for
 them, for their availability, or for changes they make. Their connection data handling is described in
 the [privacy policy](PRIVACY.md).
