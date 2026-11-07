@@ -1,9 +1,10 @@
 # Privacy policy
 
-_Last updated on 20th October , 2026_
+_Last updated on 7th November  , 2026_
+
 **Applies to:** Cutout, the browser background remover at <https://scadavide55.github.io/cutout/>,
-to local copies of it (`server.py`, `server_lan.py`), and to the source repository
-<https://github.com/scadavide55/cutout>.
+to local copies of it (`server.py`, `server_lan.py`),  the source repository
+<https://github.com/scadavide55/cutout> and the plugin in Tacet ( scadavide55.github.io/Tacet )
 
 **Version:** public beta · **Last updated:** 15 October 2026
 
@@ -87,6 +88,13 @@ own, and never reads anything from it that is not the image you pasted.
 GitHub Pages keeps standard server logs (IP address, request, time) for its own security and abuse
 purposes. That is the only processing connected to using Cutout that happens on someone else's
 machine, and it is done by GitHub as host, not by us.
+
+## Plugin in Tacet
+
+The Cutout plugin for [Tacet](https://scadavide55.github.io/Tacet), the web browser from the same creator as Cutout, works completely offline. It makes no network requests at all: the AI models and the inference runtime are bundled with the plugin (about 450 MB), so nothing is downloaded when you use it.
+
+It runs the same engines as the web version, entirely on your own device, so everything above about how your images are handled applies to it too. The hosts listed in *What leaves your device* are only contacted by the web version, never by the plugin.
+
 
 ## Cookies on our page
 
